@@ -407,7 +407,7 @@ interface IUniswapV2Router02 is IUniswapV2Router01 {
 }
 
 
-contract Unicoin is Context, IERC20, Ownable {
+contract MatrixSamurai is Context, IERC20, Ownable {
     using SafeMath for uint256;
     using Address for address;
 
@@ -425,65 +425,41 @@ contract Unicoin is Context, IERC20, Ownable {
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
     uint256 private _tBurnTotal;
-    uint256 private _tDonationTotal;
     uint256 private _tCommunityTotal;
 
-    string private _name = "UniCoin";
-    string private _symbol = "UNICOIN";
-    uint8 private _decimals = 9;
+    string private _name = "Matrix Samurai";
+    string private _symbol = "MXS";
+    uint8 private _decimals = 18;
 
 
-    uint256 public _taxFee = 5;
+    uint256 public _taxFee = 3;
     uint256 private _previousTaxFee = _taxFee;
    
-    uint256 public _burnFee = 2;
+    uint256 public _burnFee = 3;
     uint256 private _previousBurnFee = _burnFee;
    
-    uint256 public _donationFee = 5;
-    uint256 private _previousDonationFee = _donationFee;
-   
-    uint256 public _communityFee = 1;
+    uint256 public _communityFee = 3;
     uint256 private _previousCommunityFee = _communityFee;
-
-    uint256 public _liquidityFee = 2;
-    uint256 private _previousLiquidityFee = _communityFee;
 
     uint256 public _maxTxAmount = 1000000000 * 10 ** 9;
     uint256 private minimumTokensBeforeSwap = 5 * 10**5 * 10**9;
    
-    address payable public charityAddress = 0xF18CF8Da7A571960a7E8c4951b125d649A4E6c85;
+    address payable public communityAddress = 0xdD870fA1b7C4700F2BD7f44238821C26f7392148;
 
-    address payable public communityAddress = 0xf66b28d15e95f2e75459902D5D15C06B950fDcad;
-
-    IUniswapV2Router02 public immutable uniswapV2Router;
-    address public immutable uniswapV2Pair;
-   
-    bool inSwapAndLiquify;
-    bool public swapAndLiquifyEnabled = false;// true;
-   
-    event RewardLiquidityProviders(uint256 tokenAmount);
-    event SwapAndLiquifyEnabledUpdated(bool enabled);
-    event SwapAndLiquify(
-        uint256 tokensSwapped,
-        uint256 ethReceived,
-        uint256 tokensIntoLiqudity
-    );
-   
-    modifier lockTheSwap {
-        inSwapAndLiquify = true;
-        _;
-        inSwapAndLiquify = false;
-    }
+    IUniswapV2Router02 public uniswapV2Router;
+    address public uniswapV2Pair;
    
     constructor () public {
         _rOwned[_msgSender()] = _rTotal;
        
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x10ED43C718714eb63d5aA57B78B54704E256024E);
-        uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
-        uniswapV2Router = _uniswapV2Router;
+        // IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+        // uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
+        // uniswapV2Router = _uniswapV2Router;
+        
         _isExcludedFromFee[owner()] = true;
         _isExcludedFromFee[address(this)] = true;
-       
+        _isExcludedFromFee[communityAddress] = true;
+        
         emit Transfer(address(0), _msgSender(), _tTotal);
     }
 
@@ -550,18 +526,9 @@ contract Unicoin is Context, IERC20, Ownable {
         return _tBurnTotal;
     }
    
-    function totalDonationBNB() public view returns (uint256) {
-        // BNB has  18 decimals!
-        return _tDonationTotal;
-    }
-
-    function totalCommunityBNB() public view returns (uint256) {
+    function totalCommunityRewards() public view returns (uint256) {
         // BNB has  18 decimals!
         return _tCommunityTotal;
-    }
-
-    function minimumTokensBeforeSwapAmount() public view returns (uint256) {
-        return minimumTokensBeforeSwap;
     }
 
     function deliver(uint256 tAmount) public {
@@ -573,7 +540,6 @@ contract Unicoin is Context, IERC20, Ownable {
         _tFeeTotal = _tFeeTotal.add(tAmount);
     }
  
-
     function reflectionFromToken(uint256 tAmount, bool deductTransferFee) public view returns(uint256) {
         require(tAmount <= _tTotal, "Amount must be less than supply");
         if (!deductTransferFee) {
@@ -632,22 +598,8 @@ contract Unicoin is Context, IERC20, Ownable {
         require(amount > 0, "Transfer amount must be greater than zero");
         if(from != owner() && to != owner())
             require(amount <= _maxTxAmount, "Transfer amount exceeds the maxTxAmount.");
-
-
-        uint256 contractTokenBalance = balanceOf(address(this));
-        bool overMinimumTokenBalance = contractTokenBalance >= minimumTokensBeforeSwap;
-        if (
-            overMinimumTokenBalance &&
-            !inSwapAndLiquify &&
-            from != uniswapV2Pair &&
-            swapAndLiquifyEnabled
-        ) {
-            contractTokenBalance = minimumTokensBeforeSwap;
-            swapAndLiquify(contractTokenBalance);
-        }
-       
+        
         bool takeFee = true;
-       
         //if any account belongs to _isExcludedFromFee account then remove the fee
         if(_isExcludedFromFee[from] || _isExcludedFromFee[to]){
             takeFee = false;
@@ -655,61 +607,6 @@ contract Unicoin is Context, IERC20, Ownable {
        
         _tokenTransfer(from,to,amount,takeFee);
     }
-
-    function swapAndLiquify(uint256 contractTokenBalance) public lockTheSwap {
-        uint256 totalFee = _donationFee.add(_communityFee).add(_liquidityFee);
-        uint256 totalFeeWithoutLiquidityTokens = _donationFee.add(_communityFee).add(_liquidityFee.div(2));
-        uint256 tokenAmountToSell = contractTokenBalance.div(totalFee).mul(totalFeeWithoutLiquidityTokens);
-        uint256 tokenAmountForLiquidity = contractTokenBalance.sub(tokenAmountToSell);
-
-        swapTokensForEth(tokenAmountToSell);
-       
-        uint256 currentBalance = address(this).balance;
-        uint256 donationContribution = currentBalance.div(totalFeeWithoutLiquidityTokens).mul(_donationFee);
-        uint256 communityContribution = currentBalance.div(totalFeeWithoutLiquidityTokens).mul(_communityFee);
-       
-        _tDonationTotal = _tDonationTotal.add(donationContribution);
-        _tCommunityTotal = _tCommunityTotal.add(communityContribution);
-
-        TransferCharityETH(charityAddress, donationContribution);
-        TransferCommunityETH(communityAddress, communityContribution);
-       
-        addLiquidity(tokenAmountForLiquidity, address(this).balance);
-    }
-   
-    function addLiquidity(uint256 tokenAmount, uint256 ethAmount) private {
-        // approve token transfer to cover all possible scenarios
-        _approve(address(this), address(uniswapV2Router), tokenAmount);
-
-        // add the liquidity
-        uniswapV2Router.addLiquidityETH{value: ethAmount}(
-            address(this),
-            tokenAmount,
-            0, // slippage is unavoidable
-            0, // slippage is unavoidable
-            owner(),
-            block.timestamp
-        );
-    }
-
-    function swapTokensForEth(uint256 tokenAmount) private {
-        // generate the uniswap pair path of token -> weth
-        address[] memory path = new address[](2);
-        path[0] = address(this);
-        path[1] = uniswapV2Router.WETH();
-
-        _approve(address(this), address(uniswapV2Router), tokenAmount);
-
-        // make the swap
-        uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            tokenAmount,
-            0, // accept any amount of ETH
-            path,
-            address(this), // The contract
-            block.timestamp
-        );
-    }
-
 
     function _tokenTransfer(address sender, address recipient, uint256 amount,bool takeFee) private {
         if(!takeFee)
@@ -733,48 +630,48 @@ contract Unicoin is Context, IERC20, Ownable {
 
     function _transferStandard(address sender, address recipient, uint256 tAmount) private {
         uint256 currentRate =  _getRate();
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tBurn, uint256 tLiquidity) = _getValues(tAmount);
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tBurn, uint256 tCommunity) = _getValues(tAmount);
         uint256 rBurn =  tBurn.mul(currentRate);
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
         _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);
-        _takeLiquidity(tLiquidity);
+        _takeCommunity(tCommunity);
         _reflectFee(rFee, rBurn, tFee, tBurn);
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
     function _transferToExcluded(address sender, address recipient, uint256 tAmount) private {
         uint256 currentRate =  _getRate();
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tBurn, uint256 tLiquidity) = _getValues(tAmount);
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tBurn, uint256 tCommunity) = _getValues(tAmount);
         uint256 rBurn =  tBurn.mul(currentRate);
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
         _tOwned[recipient] = _tOwned[recipient].add(tTransferAmount);
         _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);          
-        _takeLiquidity(tLiquidity);
+        _takeCommunity(tCommunity);
         _reflectFee(rFee, rBurn, tFee, tBurn);
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
     function _transferFromExcluded(address sender, address recipient, uint256 tAmount) private {
         uint256 currentRate =  _getRate();
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tBurn, uint256 tLiquidity) = _getValues(tAmount);
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tBurn, uint256 tCommunity) = _getValues(tAmount);
         uint256 rBurn =  tBurn.mul(currentRate);
         _tOwned[sender] = _tOwned[sender].sub(tAmount);
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
         _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);  
-        _takeLiquidity(tLiquidity);
+        _takeCommunity(tCommunity);
         _reflectFee(rFee, rBurn, tFee, tBurn);
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
     function _transferBothExcluded(address sender, address recipient, uint256 tAmount) private {
         uint256 currentRate =  _getRate();
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tBurn, uint256 tLiquidity) = _getValues(tAmount);
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tBurn, uint256 tCommunity) = _getValues(tAmount);
         uint256 rBurn =  tBurn.mul(currentRate);
         _tOwned[sender] = _tOwned[sender].sub(tAmount);
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
         _tOwned[recipient] = _tOwned[recipient].add(tTransferAmount);
         _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);       
-        _takeLiquidity(tLiquidity);
+        _takeCommunity(tCommunity);
         _reflectFee(rFee, rBurn, tFee, tBurn);
         emit Transfer(sender, recipient, tTransferAmount);
     }
@@ -787,25 +684,25 @@ contract Unicoin is Context, IERC20, Ownable {
     }
 
     function _getValues(uint256 tAmount) private view returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256) {
-        (uint256 tTransferAmount, uint256 tFee, uint256 tBurn, uint256 tLiquidity) = _getTValues(tAmount);
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(tAmount, tFee, tBurn, tLiquidity, _getRate());
-        return (rAmount, rTransferAmount, rFee, tTransferAmount, tFee, tBurn, tLiquidity);
+        (uint256 tTransferAmount, uint256 tFee, uint256 tBurn, uint256 tCommunity) = _getTValues(tAmount);
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(tAmount, tFee, tBurn, tCommunity, _getRate());
+        return (rAmount, rTransferAmount, rFee, tTransferAmount, tFee, tBurn, tCommunity);
     }
 
     function _getTValues(uint256 tAmount) private view returns (uint256, uint256, uint256, uint256) {
         uint256 tFee = calculateTaxFee(tAmount);
         uint256 tBurn = calculateBurnFee(tAmount);
-        uint256 tLiquidity = calculateLiquidityFee(tAmount);
-        uint256 tTransferAmount = tAmount.sub(tFee).sub(tBurn).sub(tLiquidity);
-        return (tTransferAmount, tFee, tBurn, tLiquidity);
+        uint256 tCommunity = calculateCommunityFee(tAmount);
+        uint256 tTransferAmount = tAmount.sub(tFee).sub(tBurn).sub(tCommunity);
+        return (tTransferAmount, tFee, tBurn, tCommunity);
     }
 
-    function _getRValues(uint256 tAmount, uint256 tFee, uint256 tBurn, uint256 tLiquidity, uint256 currentRate) private pure returns (uint256, uint256, uint256) {
+    function _getRValues(uint256 tAmount, uint256 tFee, uint256 tBurn, uint256 tCommunity, uint256 currentRate) private pure returns (uint256, uint256, uint256) {
         uint256 rAmount = tAmount.mul(currentRate);
         uint256 rFee = tFee.mul(currentRate);
         uint256 rBurn = tBurn.mul(currentRate);
-        uint256 rLiquidity = tLiquidity.mul(currentRate);
-        uint256 rTransferAmount = rAmount.sub(rFee).sub(rBurn).sub(rLiquidity);
+        uint256 rCommunity = tCommunity.mul(currentRate);
+        uint256 rTransferAmount = rAmount.sub(rFee).sub(rBurn).sub(rCommunity);
         return (rAmount, rTransferAmount, rFee);
     }
 
@@ -826,14 +723,15 @@ contract Unicoin is Context, IERC20, Ownable {
         return (rSupply, tSupply);
     }
    
-    function _takeLiquidity(uint256 tLiquidity) private {
+    function _takeCommunity(uint256 tCommunity) private {
         uint256 currentRate =  _getRate();
-        uint256 rLiquidity = tLiquidity.mul(currentRate);
-        _rOwned[address(this)] = _rOwned[address(this)].add(rLiquidity);
-        if(_isExcluded[address(this)])
-            _tOwned[address(this)] = _tOwned[address(this)].add(tLiquidity);
+        uint256 rCommunity = tCommunity.mul(currentRate);
+        _rOwned[communityAddress] = _rOwned[communityAddress].add(rCommunity);
+        _tCommunityTotal = _tCommunityTotal.add(tCommunity);
+        if(_isExcluded[communityAddress])
+            _tOwned[communityAddress] = _tOwned[communityAddress].add(tCommunity);
     }
-   
+
     function calculateTaxFee(uint256 _amount) private view returns (uint256) {
         return _amount.mul(_taxFee).div(
             10**2
@@ -846,35 +744,28 @@ contract Unicoin is Context, IERC20, Ownable {
         );
     }
    
-    function calculateLiquidityFee(uint256 _amount) private view returns (uint256) {
-        uint256 fee = _donationFee.add(_communityFee).add(_liquidityFee);
-        return _amount.mul(fee).div(
+    function calculateCommunityFee(uint256 _amount) private view returns (uint256) {
+        return _amount.mul(_communityFee).div(
             10**2
         );
     }
-   
+
     function removeAllFee() private {
-        if(_taxFee == 0 && _burnFee == 0 && _donationFee == 0 && _communityFee == 0) return;
+        if(_taxFee == 0 && _burnFee == 0 && _communityFee == 0) return;
        
         _previousTaxFee = _taxFee;
         _previousBurnFee = _burnFee;
-        _previousDonationFee = _donationFee;
         _previousCommunityFee = _communityFee;
-        _previousLiquidityFee = _liquidityFee;
-       
+
         _taxFee = 0;
         _burnFee = 0;
-        _donationFee = 0;
         _communityFee = 0;
-        _liquidityFee = 0;
     }
    
     function restoreAllFee() private {
         _taxFee = _previousTaxFee;
         _burnFee = _previousBurnFee;
-        _donationFee = _previousDonationFee;
         _communityFee = _previousCommunityFee;
-        _liquidityFee = _previousLiquidityFee;
     }
 
     function isExcludedFromFee(address account) public view returns(bool) {
@@ -897,16 +788,8 @@ contract Unicoin is Context, IERC20, Ownable {
         _burnFee = burnFee;
     }
    
-    function setDonationFeePercent(uint256 DonationFee) external onlyOwner() {
-        _donationFee = DonationFee;
-    }
-   
     function setCommunityFeePercent(uint256 CommunityFee) external onlyOwner() {
         _communityFee = CommunityFee;
-    }
-
-    function setLiquidityFeePercent(uint256 LiquidityFee) external onlyOwner() {
-        _liquidityFee = LiquidityFee;
     }
 
     function setMaxTxPercent(uint256 maxTxPercent, uint256 maxTxDecimals) external onlyOwner() {
@@ -915,23 +798,22 @@ contract Unicoin is Context, IERC20, Ownable {
         );
     }
 
-    function setNumTokensSellToAddToLiquidity(uint256 _minimumTokensBeforeSwap) external onlyOwner() {
-        minimumTokensBeforeSwap = _minimumTokensBeforeSwap;
-    }
-
-    function setSwapAndLiquifyEnabled(bool _enabled) public onlyOwner {
-        swapAndLiquifyEnabled = _enabled;
-        emit SwapAndLiquifyEnabledUpdated(_enabled);
-    }
-   
-    function TransferCharityETH(address payable recipient, uint256 amount) private {
-        recipient.transfer(amount);
-    }
-   
-    function TransferCommunityETH(address payable recipient, uint256 amount) private {
-        recipient.transfer(amount);
-    }
-
      //to recieve ETH from uniswapV2Router when swaping
     receive() external payable {}
+}
+
+contract Deploy {
+    MatrixSamurai public token;
+    
+    constructor () public {
+        token = new MatrixSamurai();
+        
+        token.transfer(0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2, 200000000 * 10 ** 9);
+        token.transfer(0xCA35b7d915458EF540aDe6068dFe2F44E8fa733c, 200000000 * 10 ** 9);
+        token.transfer(0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db, 200000000 * 10 ** 9);
+        token.transfer(0x78731D3Ca6b7E34aC0F824c42a7cC18A495cabaB, 200000000 * 10 ** 9);
+        token.transfer(0x617F2E2fD72FD9D5503197092aC168c91465E7f2, 200000000 * 10 ** 9);
+
+// community 0xdD870fA1b7C4700F2BD7f44238821C26f7392148
+    }
 }
