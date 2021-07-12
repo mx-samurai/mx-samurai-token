@@ -383,7 +383,10 @@ contract MatrixSamurai is Context, IERC20, Ownable {
 
     mapping (address => bool) private _isExcludedFromFee;
 
-    mapping (address => bool) private _isExcluded;
+    mapping (address => bool) private _isExcludedFromReward;
+    
+    mapping (address => bool) private _isExcludedFromBlockLimit;
+
     address[] private _excluded;
   
     uint256 private constant MAX = ~uint256(0);
@@ -393,8 +396,8 @@ contract MatrixSamurai is Context, IERC20, Ownable {
     uint256 private _tBurnTotal;
     uint256 private _tCommunityTotal;
 
-    string private _name = "Matrix Samurai";
-    string private _symbol = "MXS";
+    string private _name = "MXTEST";
+    string private _symbol = "MXTEST";
     uint8 private _decimals = 18;
 
 
@@ -407,12 +410,11 @@ contract MatrixSamurai is Context, IERC20, Ownable {
     uint256 public _communityFee = 3;
     uint256 private _previousCommunityFee = _communityFee;
 
-    uint256 public _maxTxAmount = 1000000000 * 10 ** 18;
-    uint256 private minimumTokensBeforeSwap = 5 * 10**5 * 10**18;
-   
+    uint256 public _maxTxAmount = 1000000 * 10 ** 18;
+
     address public communityAddress = 0xdD870fA1b7C4700F2BD7f44238821C26f7392148;
     
-    mapping(address => uint256) lastPurchase;
+    mapping(address => uint256) lastBlockTransfer;
     
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapV2Pair;
@@ -420,13 +422,20 @@ contract MatrixSamurai is Context, IERC20, Ownable {
     constructor () public {
         _rOwned[_msgSender()] = _rTotal;
        
-        // IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
-        // uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
-        // uniswapV2Router = _uniswapV2Router;
+        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+        uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
+        uniswapV2Router = _uniswapV2Router;
         
         _isExcludedFromFee[owner()] = true;
         _isExcludedFromFee[address(this)] = true;
         _isExcludedFromFee[communityAddress] = true;
+        
+        _isExcludedFromReward[uniswapV2Pair] = true;
+        
+        _isExcludedFromBlockLimit[owner()] = true;
+        _isExcludedFromBlockLimit[uniswapV2Pair] = true;
+        _isExcludedFromBlockLimit[address(uniswapV2Router)] = true;
+        _isExcludedFromBlockLimit[communityAddress] = true;
         
         emit Transfer(address(0), _msgSender(), _tTotal);
     }
@@ -448,7 +457,7 @@ contract MatrixSamurai is Context, IERC20, Ownable {
     }
 
     function balanceOf(address account) public view override returns (uint256) {
-        if (_isExcluded[account]) return _tOwned[account];
+        if (_isExcludedFromReward[account]) return _tOwned[account];
         return tokenFromReflection(_rOwned[account]);
     }
 
@@ -483,7 +492,7 @@ contract MatrixSamurai is Context, IERC20, Ownable {
     }
 
     function isExcludedFromReward(address account) public view returns (bool) {
-        return _isExcluded[account];
+        return _isExcludedFromReward[account];
     }
 
     function totalFees() public view returns (uint256) {
@@ -500,7 +509,7 @@ contract MatrixSamurai is Context, IERC20, Ownable {
 
     function deliver(uint256 tAmount) public {
         address sender = _msgSender();
-        require(!_isExcluded[sender], "Excluded addresses cannot call this function");
+        require(!_isExcludedFromReward[sender], "Excluded addresses cannot call this function");
         (uint256 rAmount,,,,,,) = _getValues(tAmount);
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
         _rTotal = _rTotal.sub(rAmount);
@@ -525,22 +534,21 @@ contract MatrixSamurai is Context, IERC20, Ownable {
     }
 
     function excludeFromReward(address account) public onlyOwner() {
-        // require(account != 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D, 'We can not exclude Uniswap router.');
-        require(!_isExcluded[account], "Account is already excluded");
+        require(!_isExcludedFromReward[account], "Account is already excluded");
         if(_rOwned[account] > 0) {
             _tOwned[account] = tokenFromReflection(_rOwned[account]);
         }
-        _isExcluded[account] = true;
+        _isExcludedFromReward[account] = true;
         _excluded.push(account);
     }
 
     function includeInReward(address account) external onlyOwner() {
-        require(_isExcluded[account], "Account is already excluded");
+        require(_isExcludedFromReward[account], "Account is already excluded");
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == account) {
                 _excluded[i] = _excluded[_excluded.length - 1];
                 _tOwned[account] = 0;
-                _isExcluded[account] = false;
+                _isExcludedFromReward[account] = false;
                 _excluded.pop();
                 break;
             }
@@ -564,22 +572,25 @@ contract MatrixSamurai is Context, IERC20, Ownable {
         require(to != address(0), "ERC20: transfer to the zero address");
         require(amount > 0, "Transfer amount must be greater than zero");
         
-        if(from != owner() && to != owner())
+        if (from != owner() && to != owner()) {
             require(amount <= _maxTxAmount, "Transfer amount exceeds the maxTxAmount.");
+        }
         
-        if (to != uniswapV2Pair) {
-            require(block.timestamp - lastPurchase[to] > 30, "Transfers must be at least 30 seconds apart");
-            lastPurchase[to] = block.timestamp;
-        } else if (from != uniswapV2Pair) {
-            require(block.timestamp - lastPurchase[from] > 30, "Transfers must be at least 30 seconds apart");
-            lastPurchase[from] = block.timestamp;
+        if (!_isExcludedFromBlockLimit[to]) {
+            require(block.number > lastBlockTransfer[to], "One transfer per block");
+            lastBlockTransfer[to] = block.number;
+        }
+        
+        if (!_isExcludedFromBlockLimit[from]) {
+            require(block.number > lastBlockTransfer[from], "One transfer per block");
+            lastBlockTransfer[from] = block.number;
         }
         
         bool takeFee = true;
         
         // if any account belongs to _isExcludedFromFee account then remove the fee
         // do not take fee if wallet to wallet transfer ( to / from uniswap)
-        if((_isExcludedFromFee[from] || _isExcludedFromFee[to]) || (to != uniswapV2Pair && from != uniswapV2Pair)){
+        if ((_isExcludedFromFee[from] || _isExcludedFromFee[to]) || (to != uniswapV2Pair && from != uniswapV2Pair)) {
             takeFee = false;
         }
        
@@ -590,13 +601,13 @@ contract MatrixSamurai is Context, IERC20, Ownable {
         if(!takeFee)
             removeAllFee();
        
-        if (_isExcluded[sender] && !_isExcluded[recipient]) {
+        if (_isExcludedFromReward[sender] && !_isExcludedFromReward[recipient]) {
             _transferFromExcluded(sender, recipient, amount);
-        } else if (!_isExcluded[sender] && _isExcluded[recipient]) {
+        } else if (!_isExcludedFromReward[sender] && _isExcludedFromReward[recipient]) {
             _transferToExcluded(sender, recipient, amount);
-        } else if (!_isExcluded[sender] && !_isExcluded[recipient]) {
+        } else if (!_isExcludedFromReward[sender] && !_isExcludedFromReward[recipient]) {
             _transferStandard(sender, recipient, amount);
-        } else if (_isExcluded[sender] && _isExcluded[recipient]) {
+        } else if (_isExcludedFromReward[sender] && _isExcludedFromReward[recipient]) {
             _transferBothExcluded(sender, recipient, amount);
         } else {
             _transferStandard(sender, recipient, amount);
@@ -706,26 +717,20 @@ contract MatrixSamurai is Context, IERC20, Ownable {
         uint256 rCommunity = tCommunity.mul(currentRate);
         _rOwned[communityAddress] = _rOwned[communityAddress].add(rCommunity);
         _tCommunityTotal = _tCommunityTotal.add(tCommunity);
-        if(_isExcluded[communityAddress])
+        if(_isExcludedFromReward[communityAddress])
             _tOwned[communityAddress] = _tOwned[communityAddress].add(tCommunity);
     }
 
     function calculateTaxFee(uint256 _amount) private view returns (uint256) {
-        return _amount.mul(_taxFee).div(
-            10**2
-        );
+        return _amount.mul(_taxFee).div(100);
     }
    
     function calculateBurnFee(uint256 _amount) private view returns (uint256) {
-        return _amount.mul(_burnFee).div(
-            10**2
-        );
+        return _amount.mul(_burnFee).div(100);
     }
    
     function calculateCommunityFee(uint256 _amount) private view returns (uint256) {
-        return _amount.mul(_communityFee).div(
-            10**2
-        );
+        return _amount.mul(_communityFee).div(100);
     }
 
     function removeAllFee() private {
@@ -757,7 +762,19 @@ contract MatrixSamurai is Context, IERC20, Ownable {
     function includeInFee(address account) public onlyOwner {
         _isExcludedFromFee[account] = false;
     }
+    
+    function isExcludedFromBlockLimit(address account) public view returns(bool) {
+        return _isExcludedFromBlockLimit[account];
+    }
    
+    function excludeFromBlockLimit(address account) public onlyOwner {
+        _isExcludedFromBlockLimit[account] = true;
+    }
+   
+    function includeInBlockLimit(address account) public onlyOwner {
+        _isExcludedFromBlockLimit[account] = false;
+    }
+
     function setTaxFeePercent(uint256 taxFee) external onlyOwner() {
         _taxFee = taxFee;
     }
@@ -770,10 +787,8 @@ contract MatrixSamurai is Context, IERC20, Ownable {
         _communityFee = CommunityFee;
     }
 
-    function setMaxTxPercent(uint256 maxTxPercent, uint256 maxTxDecimals) external onlyOwner() {
-        _maxTxAmount = _tTotal.mul(maxTxPercent).div(
-            10**(uint256(maxTxDecimals) + 2)
-        );
+    function setMaxTxAmount(uint256 maxTxAmount) external onlyOwner() {
+        _maxTxAmount = maxTxAmount;
     }
     
     function setCommunityWallet(address _address) public onlyOwner {
@@ -795,7 +810,8 @@ contract Deploy {
         token.transfer(0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db, 200000000 * 10 ** 18);
         token.transfer(0x78731D3Ca6b7E34aC0F824c42a7cC18A495cabaB, 200000000 * 10 ** 18);
         token.transfer(0x617F2E2fD72FD9D5503197092aC168c91465E7f2, 200000000 * 10 ** 18);
-
+        
+        token.transferOwnership(msg.sender);
 // community 0xdD870fA1b7C4700F2BD7f44238821C26f7392148
     }
 }
