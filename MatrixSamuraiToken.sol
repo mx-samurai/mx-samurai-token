@@ -13,7 +13,6 @@ abstract contract Context {
     }
 }
 
-
 interface IERC20 {
 
     function totalSupply() external view returns (uint256);
@@ -171,31 +170,7 @@ contract Ownable is Context {
         emit OwnershipTransferred(_owner, newOwner);
         _owner = newOwner;
     }
-
-    function getUnlockTime() public view returns (uint256) {
-        return _lockTime;
-    }
-    
-    function getTime() public view returns (uint256) {
-        return now;
-    }
-
-    function lock(uint256 time) public virtual onlyOwner {
-        _previousOwner = _owner;
-        _owner = address(0);
-        _lockTime = now + time;
-        emit OwnershipTransferred(_owner, address(0));
-    }
-   
-    function unlock() public virtual {
-        require(_previousOwner == msg.sender, "You don't have permission to unlock");
-        require(now > _lockTime , "Contract is locked until 7 days");
-        emit OwnershipTransferred(_owner, _previousOwner);
-        _owner = _previousOwner;
-    }
 }
-
-// pragma solidity >=0.5.0;
 
 interface IUniswapV2Factory {
     event PairCreated(address indexed token0, address indexed token1, address pair, uint);
@@ -213,9 +188,6 @@ interface IUniswapV2Factory {
     function setFeeToSetter(address) external;
 }
 
-
-// pragma solidity >=0.5.0;
-// UniCoin
 interface IUniswapV2Pair {
     event Approval(address indexed owner, address indexed spender, uint value);
     event Transfer(address indexed from, address indexed to, uint value);
@@ -264,8 +236,6 @@ interface IUniswapV2Pair {
 
     function initialize(address, address) external;
 }
-
-// pragma solidity >=0.6.2;
 
 interface IUniswapV2Router01 {
     function factory() external pure returns (address);
@@ -361,10 +331,6 @@ interface IUniswapV2Router01 {
     function getAmountsIn(uint amountOut, address[] calldata path) external view returns (uint[] memory amounts);
 }
 
-
-
-// pragma solidity >=0.6.2;
-
 interface IUniswapV2Router02 is IUniswapV2Router01 {
     function removeLiquidityETHSupportingFeeOnTransferTokens(
         address token,
@@ -421,7 +387,7 @@ contract MatrixSamurai is Context, IERC20, Ownable {
     address[] private _excluded;
   
     uint256 private constant MAX = ~uint256(0);
-    uint256 private _tTotal = 1000000000 * 10 ** 9;
+    uint256 private _tTotal = 1000000000 * 10 ** 18;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
     uint256 private _tBurnTotal;
@@ -441,11 +407,13 @@ contract MatrixSamurai is Context, IERC20, Ownable {
     uint256 public _communityFee = 3;
     uint256 private _previousCommunityFee = _communityFee;
 
-    uint256 public _maxTxAmount = 1000000000 * 10 ** 9;
-    uint256 private minimumTokensBeforeSwap = 5 * 10**5 * 10**9;
+    uint256 public _maxTxAmount = 1000000000 * 10 ** 18;
+    uint256 private minimumTokensBeforeSwap = 5 * 10**5 * 10**18;
    
-    address payable public communityAddress = 0xdD870fA1b7C4700F2BD7f44238821C26f7392148;
-
+    address public communityAddress = 0xdD870fA1b7C4700F2BD7f44238821C26f7392148;
+    
+    mapping(address => uint256) lastPurchase;
+    
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapV2Pair;
    
@@ -527,7 +495,6 @@ contract MatrixSamurai is Context, IERC20, Ownable {
     }
    
     function totalCommunityRewards() public view returns (uint256) {
-        // BNB has  18 decimals!
         return _tCommunityTotal;
     }
 
@@ -596,12 +563,23 @@ contract MatrixSamurai is Context, IERC20, Ownable {
         require(from != address(0), "ERC20: transfer from the zero address");
         require(to != address(0), "ERC20: transfer to the zero address");
         require(amount > 0, "Transfer amount must be greater than zero");
+        
         if(from != owner() && to != owner())
             require(amount <= _maxTxAmount, "Transfer amount exceeds the maxTxAmount.");
         
+        if (to != uniswapV2Pair) {
+            require(block.timestamp - lastPurchase[to] > 30, "Transfers must be at least 30 seconds apart");
+            lastPurchase[to] = block.timestamp;
+        } else if (from != uniswapV2Pair) {
+            require(block.timestamp - lastPurchase[from] > 30, "Transfers must be at least 30 seconds apart");
+            lastPurchase[from] = block.timestamp;
+        }
+        
         bool takeFee = true;
-        //if any account belongs to _isExcludedFromFee account then remove the fee
-        if(_isExcludedFromFee[from] || _isExcludedFromFee[to]){
+        
+        // if any account belongs to _isExcludedFromFee account then remove the fee
+        // do not take fee if wallet to wallet transfer ( to / from uniswap)
+        if((_isExcludedFromFee[from] || _isExcludedFromFee[to]) || (to != uniswapV2Pair && from != uniswapV2Pair)){
             takeFee = false;
         }
        
@@ -797,7 +775,11 @@ contract MatrixSamurai is Context, IERC20, Ownable {
             10**(uint256(maxTxDecimals) + 2)
         );
     }
-
+    
+    function setCommunityWallet(address _address) public onlyOwner {
+        communityAddress = _address;
+    }
+    
      //to recieve ETH from uniswapV2Router when swaping
     receive() external payable {}
 }
@@ -808,11 +790,11 @@ contract Deploy {
     constructor () public {
         token = new MatrixSamurai();
         
-        token.transfer(0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2, 200000000 * 10 ** 9);
-        token.transfer(0xCA35b7d915458EF540aDe6068dFe2F44E8fa733c, 200000000 * 10 ** 9);
-        token.transfer(0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db, 200000000 * 10 ** 9);
-        token.transfer(0x78731D3Ca6b7E34aC0F824c42a7cC18A495cabaB, 200000000 * 10 ** 9);
-        token.transfer(0x617F2E2fD72FD9D5503197092aC168c91465E7f2, 200000000 * 10 ** 9);
+        token.transfer(0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2, 200000000 * 10 ** 18);
+        token.transfer(0xCA35b7d915458EF540aDe6068dFe2F44E8fa733c, 200000000 * 10 ** 18);
+        token.transfer(0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db, 200000000 * 10 ** 18);
+        token.transfer(0x78731D3Ca6b7E34aC0F824c42a7cC18A495cabaB, 200000000 * 10 ** 18);
+        token.transfer(0x617F2E2fD72FD9D5503197092aC168c91465E7f2, 200000000 * 10 ** 18);
 
 // community 0xdD870fA1b7C4700F2BD7f44238821C26f7392148
     }
