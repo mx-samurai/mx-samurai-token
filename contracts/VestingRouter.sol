@@ -38,6 +38,7 @@ contract VestingRouter is Ownable {
     function userVestingInfo(address _account) public view returns(
         address vestingAddress,
         uint256 releasedAmount,
+        uint256 releasableAmount,
         uint256 vestedAmount,
         uint256 allocation,
         uint256 reflectionsReceived,
@@ -49,6 +50,7 @@ contract VestingRouter is Ownable {
     function vestingInfo(address _vestingAddress) public view returns (
         address vestingAddress,
         uint256 releasedAmount,
+        uint256 releasableAmount,
         uint256 vestedAmount,
         uint256 allocation,
         uint256 reflectionsReceived,
@@ -57,6 +59,7 @@ contract VestingRouter is Ownable {
         Vesting vestingContract = Vesting(_vestingAddress);
         vestingAddress = _vestingAddress;
         releasedAmount = vestingContract.released();
+        releasableAmount = vestingContract.releasableAmount();
         vestedAmount = vestingContract.vestedAmount();
         allocation = vestingContract.initialAllocation();
         reflectionsReceived = vestingContract.reflections();
@@ -65,8 +68,8 @@ contract VestingRouter is Ownable {
    
     function revoke(address _vestingAddress) public onlyOwner {
         Vesting vestingContract = Vesting(_vestingAddress);
-        require(address(vestingContract) == address(0), "Cannot revoke an invalid address");
-        require(vestingContract.complete(), "Vesting is already complete");
+        require(address(vestingContract) != address(0), "Cannot release an invalid address");
+        require(!vestingContract.complete(), "Vesting is already complete");
        
         vestingContract.revoke();
         userVesting[vestingContract.beneficiary()].activeVesting = address(0);
@@ -74,8 +77,8 @@ contract VestingRouter is Ownable {
    
     function release(address _vestingAddress) public {
         Vesting vestingContract = Vesting(_vestingAddress);
-        require(address(vestingContract) == address(0), "Cannot release an invalid address");
-        require(vestingContract.complete(), "Vesting is already complete");
+        require(address(vestingContract) != address(0), "Cannot release an invalid address");
+        require(!vestingContract.complete(), "Vesting is already complete");
         require(vestingContract.beneficiary() == msg.sender, "Sender must be beneficiary");
 
         vestingContract.release();

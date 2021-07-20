@@ -28,8 +28,8 @@ contract MXSToken is Context, IERC20, Ownable {
     uint256 private constant MAX = ~uint256(0);
     uint256 private _tTotal = 1000000000 * 10 ** 18;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
-    uint256 public _tFeeTotal;
-    uint256 public _tCommunityTotal;
+    uint256 private _tFeeTotal;
+    uint256 private _tCommunityTotal;
 
     string private _name = "Matrix Samurai";
     string private _symbol = "MXS";

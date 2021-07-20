@@ -1,8 +1,8 @@
-const { ethers, waffle } = require('hardhat');
-const { solidity } = require("ethereum-waffle");
-const chai = require("chai");
-const { expect } = chai;
-chai.use(solidity);
+const { expect } = require("chai");
+const { BigNumber } = require("ethers");
+const { parseEther, formatEther } = require("ethers/lib/utils");
+const { ethers } = require("hardhat");
+const { MaxUint256 } = ethers.constants;
 
 const UniswapV2FactoryBytecode = require('@uniswap/v2-core/build/UniswapV2Factory.json').bytecode;
 const UniswapV2FactoryAbi = require('@uniswap/v2-core/build/UniswapV2Factory.json').abi;
@@ -10,8 +10,6 @@ const UniswapV2RouterBytecode = require('@uniswap/v2-periphery/build/UniswapV2Ro
 const UniswapV2RouterAbi = require('@uniswap/v2-periphery/build/UniswapV2Router02.json').abi;
 const WethBytecode = require('@uniswap/v2-periphery/build/WETH9.json').bytecode;
 const WethAbi = require('@uniswap/v2-periphery/build/WETH9.json').abi;
-const { parseEther, formatEther } = require("ethers/lib/utils");
-const { MaxUint256 } = ethers.constants;
 
 const tokenAmount1 = parseEther("1000000");
 const tokenAmount2 = parseEther("5000000");
@@ -33,6 +31,8 @@ describe("Vesting Router", function () {
 
     let vestingContract1;
     let vestingContract2;
+
+    let vestingTimestamp1;
 
     let beneficiary1;
     let beneficiary2;
@@ -82,16 +82,19 @@ describe("Vesting Router", function () {
         const createVesting1 = await vestingRouter.createVesting(beneficiary1.address, tokenAmount1, duration, '0', true);
         await createVesting1.wait();
 
+        const creationBlock = await ethers.provider.getBlock("latest");
+        vestingTimestamp1 = creationBlock.timestamp;
+
         const vesting1Info = await vestingRouter.userInfo(beneficiary1.address);
         vestingContract1 = await ethers.getContractAt("Vesting", vesting1Info.activeVesting);
     });
 
     it("Vests tokens relative to time passed", async function () {
-        await ethers.provider.send("evm_increaseTime", [duration / 2]);
+        await ethers.provider.send("evm_setNextBlockTimestamp", [vestingTimestamp1 + duration / 2 ]);
         await ethers.provider.send("evm_mine");
 
         const userVestingInfo1 = await vestingRouter.userVestingInfo(beneficiary1.address);
-        const vestedAmount1 = formatEther(userVestingInfo1.vestedAmount);
+        const vestedAmount1 = formatEther(userVestingInfo1.releasableAmount);
         expect(vestedAmount1).to.equal(formatEther(parseEther("500000")));
     });
 
@@ -113,13 +116,23 @@ describe("Vesting Router", function () {
 
         const balanceAfter = await mxsToken.balanceOf(vestingContract1.address);        
         expect(balanceAfter).gte(balanceBefore);
-
-        const taxTotal = await mxsToken._tFeeTotal();
-        const communityTotal = await mxsToken._tCommunityTotal();
-
-        console.log('tax == ', formatEther(taxTotal));
-        console.log('community == ', formatEther(communityTotal));
     });
+
+    it("Beneficiary can claim vested tokens without being taxed", async function () {
+        const balanceBefore = await mxsToken.balanceOf(beneficiary1.address);
+        const userVestingInfo1 = await vestingRouter.userVestingInfo(beneficiary1.address);
+
+        const routerAsBeneficiary = await vestingRouter.connect(beneficiary1);
+
+        await ethers.provider.send("evm_setNextBlockTimestamp", [vestingTimestamp1 + duration / 2]);
+
+        await routerAsBeneficiary.release(userVestingInfo1.vestingAddress);
+
+        const balanceAfter = await mxsToken.balanceOf(beneficiary1.address);
+        const diff = balanceAfter.sub(balanceBefore);
+        expect(diff).to.equal(parseEther("500000"));
+    });
+
 
     // it("Withdraws unreleased ", async function () {
 
