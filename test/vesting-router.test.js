@@ -72,7 +72,8 @@ describe("Vesting Router", function () {
 
     beforeEach(async function () {    
         const VestingRouter = await ethers.getContractFactory("VestingRouter");
-        vestingRouter = await VestingRouter.deploy(mxsToken.address);
+        const VestingRouterAsOwner = await VestingRouter.connect(vestingOwner);
+        vestingRouter = await VestingRouterAsOwner.deploy(mxsToken.address);
 
         await vestingRouter.deployed();
 
@@ -133,6 +134,23 @@ describe("Vesting Router", function () {
         expect(diff).to.equal(parseEther("500000"));
     });
 
+    it("Vesting owner can revoke vesting", async function () {
+        const vestingRouterBalanceBefore = await mxsToken.balanceOf(vestingRouter.address);
+        const userVestingInfo1 = await vestingRouter.userVestingInfo(beneficiary1.address);
+
+        const routerAsOwner = await vestingRouter.connect(vestingOwner);
+
+        await ethers.provider.send("evm_setNextBlockTimestamp", [vestingTimestamp1 + duration / 2]);
+
+        await routerAsOwner.revoke(userVestingInfo1.vestingAddress);
+
+        const vestingBalance = await mxsToken.balanceOf(vestingContract1.address);
+        expect(vestingBalance).to.equal(parseEther("0"));
+
+        const vestingRouterBalanceAfter = await mxsToken.balanceOf(vestingRouter.address);
+        const diff = vestingRouterBalanceAfter.sub(vestingRouterBalanceBefore);
+        expect(diff).to.equal(parseEther("500000"));
+    });
 
     // it("Withdraws unreleased ", async function () {
 
