@@ -1,4 +1,5 @@
 require("@nomiclabs/hardhat-waffle");
+const { ALCEMIST_RINKEBY_URL, ETHERSCAN_API_KEY, PRIVATE_KEY_1 } = require("./config");
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -16,6 +17,19 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
+
 module.exports = {
+  defaultNetwork: "rinkeby",
+  networks: {
+    hardhat: {
+    },
+    rinkeby: {
+      url: ALCEMIST_RINKEBY_URL,
+      accounts: [PRIVATE_KEY_1]
+    }
+  },
   solidity: "0.8.4",
+  etherscan: {
+    apiKey: ETHERSCAN_API_KEY
+  }
 };
