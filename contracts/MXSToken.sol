@@ -52,7 +52,7 @@ contract MXSToken is Context, IERC20, Ownable {
     address public uniswapV2Pair;
 
     uint256 private tradingStartTime;
-    address[] private canTransferBeforeTradingIsEnabled;
+    mapping(address => bool) private canTransferBeforeTradingIsEnabled;
    
     constructor (address uniswapRouter) public {
         _rOwned[_msgSender()] = _rTotal;
@@ -416,6 +416,12 @@ contract MXSToken is Context, IERC20, Ownable {
        tradingStartTime = newStartTime;
     }
     
+    function allowPreTrading(address account, bool allowed) public onlyOwner {
+        // used for owner and pre sale addresses
+        require(canTransferBeforeTradingIsEnabled[account] != allowed, "Pre trading is already the value of 'excluded'");
+        canTransferBeforeTradingIsEnabled[account] = allowed;
+    }
+
      //to recieve ETH from uniswapV2Router when swaping
     receive() external payable {}
 }
