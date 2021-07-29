@@ -50,6 +50,9 @@ contract MXSToken is Context, IERC20, Ownable {
     
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapV2Pair;
+
+    uint256 private tradingStartTime;
+    address[] private canTransferBeforeTradingIsEnabled;
    
     constructor (address uniswapRouter) public {
         _rOwned[_msgSender()] = _rTotal;
@@ -68,6 +71,8 @@ contract MXSToken is Context, IERC20, Ownable {
         _isExcludedFromBlockLimit[uniswapV2Pair] = true;
         _isExcludedFromBlockLimit[address(uniswapV2Router)] = true;
         _isExcludedFromBlockLimit[communityAddress] = true;
+
+        canTransferBeforeTradingIsEnabled[owner()] = true;
         
         emit Transfer(address(0), _msgSender(), _tTotal);
     }
@@ -199,7 +204,12 @@ contract MXSToken is Context, IERC20, Ownable {
         require(from != address(0), "ERC20: transfer from the zero address");
         require(to != address(0), "ERC20: transfer to the zero address");
         require(amount > 0, "Transfer amount must be greater than zero");
-        
+
+        // address must be permitted to transfer before tradingStartTime
+        if(tradingStartTime > block.timestamp) {
+            require(canTransferBeforeTradingIsEnabled[from], "This account cannot send tokens until trading is enabled");
+        }
+
         if (from != owner() && to != owner()) {
             require(amount <= _maxTxAmount, "Transfer amount exceeds the maxTxAmount.");
         }
@@ -398,6 +408,12 @@ contract MXSToken is Context, IERC20, Ownable {
     
     function setCommunityWallet(address _address) public onlyOwner {
         communityAddress = _address;
+    }
+
+    function setTradingStartTime(uint256 newStartTime) public onlyOwner {
+       require(tradingStartTime > block.timestamp, "Trading has already started");
+       require(newStartTime > block.timestamp, "Start time must be in the future");
+       tradingStartTime = newStartTime;
     }
     
      //to recieve ETH from uniswapV2Router when swaping

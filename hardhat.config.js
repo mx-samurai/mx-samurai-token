@@ -1,4 +1,5 @@
 require("@nomiclabs/hardhat-waffle");
+require("@nomiclabs/hardhat-etherscan");
 const { ALCEMIST_RINKEBY_URL, ETHERSCAN_API_KEY, PRIVATE_KEY_1 } = require("./config");
 
 // This is a sample Hardhat task. To learn how to create your own go to
