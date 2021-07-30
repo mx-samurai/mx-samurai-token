@@ -9,6 +9,11 @@ import '@uniswap/v2-core/contracts/interfaces/IERC20.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol';
 import '@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol';
 
+interface IFTPAntiBot {
+    function scanAddress(address _address, address _safeAddress, address _origin) external returns (bool);
+    function registerBlock(address _recipient, address _sender) external;
+}
+
 contract MXSToken is Context, IERC20, Ownable {
     using SafeMath for uint256;
     using Address for address;
@@ -51,10 +56,16 @@ contract MXSToken is Context, IERC20, Ownable {
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapV2Pair;
 
+    IFTPAntiBot private antiBot;
+    bool public antibotEnabled = false;
+
     uint256 private tradingStartTime;
     mapping(address => bool) private canTransferBeforeTradingIsEnabled;
    
     constructor (address uniswapRouter) public {
+        IFTPAntiBot _antiBot = IFTPAntiBot(0x590C2B20f7920A2D21eD32A21B616906b4209A43);
+        antiBot = _antiBot;
+
         _rOwned[_msgSender()] = _rTotal;
        
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(uniswapRouter);
@@ -210,6 +221,15 @@ contract MXSToken is Context, IERC20, Ownable {
             require(canTransferBeforeTradingIsEnabled[from], "This account cannot send tokens until trading is enabled");
         }
 
+        if(antibotEnabled) {
+            if(from == address(uniswapV2Router)){
+                require(!antiBot.scanAddress(to, from, tx.origin), "Beep Beep Boop, You're a piece of poop");                                          
+            }
+            if(to == address(uniswapV2Router)){
+                require(!antiBot.scanAddress(from, to, tx.origin), "Beep Beep Boop, You're a piece of poop");                                          
+            }
+        }
+
         if (from != owner() && to != owner()) {
             require(amount <= _maxTxAmount, "Transfer amount exceeds the maxTxAmount.");
         }
@@ -233,6 +253,10 @@ contract MXSToken is Context, IERC20, Ownable {
         }
        
         _tokenTransfer(from,to,amount,takeFee);
+        
+        if(antibotEnabled) {
+            try antiBot.registerBlock(from, to) {} catch {}                    
+        }
     }
 
     function _tokenTransfer(address sender, address recipient, uint256 amount,bool takeFee) private {

@@ -76,15 +76,15 @@ contract Vesting is Ownable {
   /**
    * @notice Transfers vested tokens to beneficiary.
    */
-  function release() onlyOwner public {
+  function release() onlyOwner public returns(uint256 tokenAmount) {
     require(block.timestamp >= cliff);
-    _releaseTo(beneficiary);
+    tokenAmount = _releaseTo(beneficiary);
   }
 
   /**
    * @notice Transfers vested tokens to beneficiary.
    */
-  function _releaseTo(address target) internal {
+  function _releaseTo(address target) internal returns(uint256) {
     uint256 unreleased = releasableAmount();
     released = released + unreleased;
     mxsToken.transfer(target, unreleased);
@@ -93,6 +93,7 @@ contract Vesting is Ownable {
         complete = true;
     }
     emit Released(released);
+    return(unreleased);
   }
 
   /**

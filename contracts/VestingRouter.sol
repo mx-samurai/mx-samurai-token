@@ -6,8 +6,9 @@ import "./Vesting.sol";
 import "hardhat/console.sol";
 
 contract VestingRouter is Ownable {
-    event Released(uint256 amount);
-    event Revoked();
+    event VestingCreated(address beneficiary, address vestingAddress, uint256 tokenAmount);
+    event VestingReleased(uint256 amount);
+    event VestingRevoked();
 
     struct UserInfo {
         address activeVesting;
@@ -28,6 +29,8 @@ contract VestingRouter is Ownable {
         mxsToken.transfer(address(vestingContract), _tokenAmount);
         userVesting[_beneficiary].activeVesting = address(vestingContract);
         userVesting[_beneficiary].vestingHistory.push(address(vestingContract));
+
+        emit VestingCreated(_beneficiary, address(vestingContract), _tokenAmount);
     }
    
     function userInfo(address account) public view returns(address activeVesting, address[] memory vestingHistory) {
@@ -73,6 +76,7 @@ contract VestingRouter is Ownable {
        
         vestingContract.revoke();
         userVesting[vestingContract.beneficiary()].activeVesting = address(0);
+        emit VestingRevoked();
     }
    
     function release(address _vestingAddress) public {
@@ -81,10 +85,11 @@ contract VestingRouter is Ownable {
         require(!vestingContract.complete(), "Vesting is already complete");
         require(vestingContract.beneficiary() == msg.sender, "Sender must be beneficiary");
 
-        vestingContract.release();
+        uint256 tokenAmount = vestingContract.release();
        
         if (vestingContract.complete()) {
             userVesting[vestingContract.beneficiary()].activeVesting = address(0);
         }
+        emit VestingReleased(tokenAmount);
     }
 }
