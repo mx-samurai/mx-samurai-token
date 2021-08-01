@@ -14,6 +14,8 @@ async function main() {
   await vestingRouter.deployed();
 
   console.log("Vesting Router deployed to", vestingRouter.address);
+
+
 }
 
 main()

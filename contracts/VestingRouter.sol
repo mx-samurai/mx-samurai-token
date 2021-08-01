@@ -7,8 +7,8 @@ import "hardhat/console.sol";
 
 contract VestingRouter is Ownable {
     event VestingCreated(address beneficiary, address vestingAddress, uint256 tokenAmount);
-    event VestingReleased(uint256 amount);
-    event VestingRevoked();
+    event VestingReleased(address vestingAddress, uint256 amount);
+    event VestingRevoked(address vestingAddress);
 
     struct UserInfo {
         address activeVesting;
@@ -76,7 +76,7 @@ contract VestingRouter is Ownable {
        
         vestingContract.revoke();
         userVesting[vestingContract.beneficiary()].activeVesting = address(0);
-        emit VestingRevoked();
+        emit VestingRevoked(_vestingAddress);
     }
    
     function release(address _vestingAddress) public {
@@ -90,6 +90,6 @@ contract VestingRouter is Ownable {
         if (vestingContract.complete()) {
             userVesting[vestingContract.beneficiary()].activeVesting = address(0);
         }
-        emit VestingReleased(tokenAmount);
+        emit VestingReleased(_vestingAddress, tokenAmount);
     }
 }
