@@ -2,6 +2,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "hardhat/console.sol";
 
 /**
@@ -10,7 +11,7 @@ import "hardhat/console.sol";
 * typical vesting scheme, with a cliff and vesting period. Optionally revocable by the
 * owner.
 */
-contract Vesting is Ownable {
+contract Vesting is Ownable, ReentrancyGuard {
 
   event Released(uint256 amount);
   event Revoked();
@@ -84,7 +85,7 @@ contract Vesting is Ownable {
   /**
    * @notice Transfers vested tokens to beneficiary.
    */
-  function _releaseTo(address target) internal returns(uint256) {
+  function _releaseTo(address target) internal nonReentrant returns(uint256) {
     uint256 unreleased = releasableAmount();
     released = released + unreleased;
     mxsToken.transfer(target, unreleased);
@@ -99,7 +100,7 @@ contract Vesting is Ownable {
   /**
    * @notice Allows the owner to revoke the vesting. Tokens already vested are sent to the beneficiary.
    */
-  function revoke() onlyOwner public {
+  function revoke() onlyOwner public nonReentrant {
     require(revokable);
     require(!revoked);
 
