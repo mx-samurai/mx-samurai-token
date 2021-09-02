@@ -6,9 +6,9 @@ import "./Vesting.sol";
 import "hardhat/console.sol";
 
 contract VestingRouter is Ownable, ReentrancyGuard {
-    event VestingCreated(address beneficiary, address vestingAddress, uint256 tokenAmount);
-    event VestingReleased(address vestingAddress, uint256 amount);
-    event VestingRevoked(address vestingAddress);
+    event VestingCreated(address indexed beneficiary, address indexed vestingAddress, uint256 tokenAmount);
+    event VestingReleased(address indexed vestingAddress, uint256 amount);
+    event VestingRevoked(address indexed vestingAddress);
 
     struct UserInfo {
         address activeVesting;
