@@ -26,7 +26,8 @@ contract VestingRouter is Ownable, ReentrancyGuard {
     function createVesting(address _beneficiary, uint256 _tokenAmount, uint256 _duration, uint256 _cliff, bool _revokable) public onlyOwner nonReentrant {
         require(userVesting[_beneficiary].activeVesting == address(0), "Address already has an active vesting contract");
         Vesting vestingContract = new Vesting(_beneficiary, block.timestamp, _cliff, _duration, _revokable, _tokenAmount, address(mxsToken));
-        mxsToken.transfer(address(vestingContract), _tokenAmount);
+        bool transferred = mxsToken.transfer(address(vestingContract), _tokenAmount);
+        require(transferred, "Token transfer failed");
         userVesting[_beneficiary].activeVesting = address(vestingContract);
         userVesting[_beneficiary].vestingHistory.push(address(vestingContract));
 
