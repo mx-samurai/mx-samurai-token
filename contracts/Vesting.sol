@@ -129,7 +129,7 @@ contract Vesting is Ownable {
     if (block.timestamp < cliff) {
       return 0;
     } else if (block.timestamp >= start + duration || revoked) {
-      uint256 vested = mxsToken.balanceOf(address(this));
+      uint256 vested = mxsToken.balanceOf(address(this)) + released;
       // vesting is complete, allocate all tokens
       return vested;
     } else {
