@@ -17,15 +17,15 @@ contract Vesting is Ownable, ReentrancyGuard {
   event Revoked();
 
   // beneficiary of tokens after they are released
-  address public beneficiary;
+  address public immutable beneficiary;
 
-  uint256 public cliff;
-  uint256 public start;
-  uint256 public duration;
+  uint256 public immutable cliff;
+  uint256 public immutable start;
+  uint256 public immutable duration;
   uint256 public lastTierChange;
-  uint256 public initialAllocation;
+  uint256 public immutable initialAllocation;
  
-  bool public revokable;
+  bool public immutable revokable;
   bool public revoked;
   bool public complete;
 
@@ -59,7 +59,6 @@ contract Vesting is Ownable, ReentrancyGuard {
     cliff       = _start + _cliff;
     duration    = _duration;
     revokable   = _revokable;
-    lastTierChange = start;
     initialAllocation = _initialAllocation;
     mxsToken = IERC20(_mxsToken);
 
