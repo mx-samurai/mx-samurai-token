@@ -1,6 +1,6 @@
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Vesting.sol";
 import "hardhat/console.sol";
@@ -20,7 +20,7 @@ contract VestingRouter is Ownable, ReentrancyGuard {
     mapping(address => UserInfo) userVesting;
    
     constructor(address _token) {
-        mxsToken = ERC20(_token);
+        mxsToken = IERC20(_token);
     }
    
     function createVesting(address _beneficiary, uint256 _tokenAmount, uint256 _duration, uint256 _cliff, bool _revokable) public onlyOwner nonReentrant {
