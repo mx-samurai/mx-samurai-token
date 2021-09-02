@@ -18,6 +18,23 @@ contract MXSToken is Context, IERC20, Ownable {
     using SafeMath for uint256;
     using Address for address;
 
+    event ExcludeFromRewards(address indexed _address);
+    event IncludeInRewards(address indexed _address);
+    event ExcludeFromFee(address indexed _address);
+    event IncludeInFee(address indexed _address);
+    event ExcludeFromPreTrading(address indexed _address);
+    event IncludeInPreTrading(address indexed _address);
+
+    event TaxPercentUpdated(uint256 amount);
+    event CommunityPercentUpdated(uint256 amount);
+    event MaxTxUpdated(uint256 amount);
+
+    event CommunityWalletUpdated(address indexed _address);
+
+    event AntibotEnabled();
+    event AntibotDisabled();
+    event AntibotUpdated(address indexed _address);
+
     mapping (address => uint256) private _rOwned;
     mapping (address => uint256) private _tOwned;
     mapping (address => mapping (address => uint256)) private _allowances;
@@ -184,6 +201,7 @@ contract MXSToken is Context, IERC20, Ownable {
         }
         _isExcludedFromReward[account] = true;
         _excluded.push(account);
+        emit ExcludeFromRewards(account);
     }
 
     function includeInReward(address account) external onlyOwner() {
@@ -197,6 +215,7 @@ contract MXSToken is Context, IERC20, Ownable {
                 break;
             }
         }
+        emit IncludeInRewards(account);
     }
 
     function _approve(address owner, address spender, uint256 amount) private {
@@ -398,10 +417,12 @@ contract MXSToken is Context, IERC20, Ownable {
    
     function excludeFromFee(address account) external onlyOwner {
         _isExcludedFromFee[account] = true;
+        emit ExcludeFromFee(account);
     }
    
     function includeInFee(address account) external onlyOwner {
         _isExcludedFromFee[account] = false;
+        emit IncludeInFee(account);
     }
     
     function isExcludedFromBlockLimit(address account) external view returns(bool) {
@@ -419,20 +440,24 @@ contract MXSToken is Context, IERC20, Ownable {
     function setTaxFeePercent(uint256 taxFee) external onlyOwner() {
         require(taxFee < 20, "Invalid tax fee");
         _taxFee = taxFee;
+        emit TaxPercentUpdated(taxFee);
     }
       
     function setCommunityFeePercent(uint256 communityFee) external onlyOwner() {
         require(communityFee < 20, "Invalid community fee");
         _communityFee = communityFee;
+        emit CommunityPercentUpdated(communityFee);
     }
 
     function setMaxTxAmount(uint256 maxTxAmount) external onlyOwner() {
         require(maxTxAmount > 0, "Invalid Max Transaction");
         _maxTxAmount = maxTxAmount;
+        emit MaxTxUpdated(maxTxAmount);
     }
     
     function setCommunityWallet(address _address) external onlyOwner {
         communityAddress = _address;
+        emit CommunityWalletUpdated(_address);
     }
 
     function setTradingStartTime(uint256 newStartTime) external onlyOwner {
@@ -445,19 +470,27 @@ contract MXSToken is Context, IERC20, Ownable {
         // used for owner and pre sale addresses
         require(canTransferBeforeTradingIsEnabled[account] != allowed, "Pre trading is already the value of 'excluded'");
         canTransferBeforeTradingIsEnabled[account] = allowed;
+        if (allowed) {
+            emit ExcludeFromPreTrading(account);
+        } else {
+            emit IncludeInPreTrading(account);
+        }
     }
 
     function assignAntiBot(address _address) external onlyOwner() {
         IFTPAntiBot _antiBot = IFTPAntiBot(_address);                 
         antiBot = _antiBot;
+        emit AntibotUpdated(_address);
     }
     
     function toggleAntiBot() external onlyOwner() {
         if(antibotEnabled){
             antibotEnabled = false;
+            emit AntibotDisabled();
         }
         else{
             antibotEnabled = true;
+            emit AntibotEnabled();
         }
     }
 }
