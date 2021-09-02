@@ -22,7 +22,6 @@ contract Vesting is Ownable, ReentrancyGuard {
   uint256 public immutable cliff;
   uint256 public immutable start;
   uint256 public immutable duration;
-  uint256 public lastTierChange;
   uint256 public immutable initialAllocation;
  
   bool public immutable revokable;
