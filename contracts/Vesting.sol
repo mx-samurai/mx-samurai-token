@@ -69,7 +69,7 @@ contract Vesting is Ownable, ReentrancyGuard {
   /**
    * @notice Transfers vested tokens to beneficiary.
    */
-  function release() onlyOwner public returns(uint256 tokenAmount) {
+  function release() onlyOwner external returns(uint256 tokenAmount) {
     require(block.timestamp >= cliff, "Cliff has not been reached yet");
     tokenAmount = _releaseTo(beneficiary);
   }
@@ -94,7 +94,7 @@ contract Vesting is Ownable, ReentrancyGuard {
   /**
    * @notice Allows the owner to revoke the vesting. Tokens already vested are sent to the beneficiary.
    */
-  function revoke() onlyOwner public nonReentrant {
+  function revoke() onlyOwner external nonReentrant {
     require(revokable, "It's not revokable");
     require(!revoked, "It's already revoked");
 
@@ -137,21 +137,21 @@ contract Vesting is Ownable, ReentrancyGuard {
     /**
    * @dev Calculates the amount of reflections the vesting contract has received.
    */
-  function reflections() public view returns (uint256) {
+  function reflections() external view returns (uint256) {
     return mxsToken.balanceOf(address(this)) + released - initialAllocation;
   }
 
     /**
    * @dev Calculates the amount of time remaining in seconds.
    */
-  function timeRemaining() public view returns (uint256) {
+  function timeRemaining() external view returns (uint256) {
       return start + duration - block.timestamp;
   }
  
   /**
    * @notice Allow withdrawing any token other than the relevant one
    */
-  function releaseForeignToken(IERC20 _token, uint256 amount) public onlyOwner {
+  function releaseForeignToken(IERC20 _token, uint256 amount) external onlyOwner {
     require(_token != mxsToken, "The token is mxsToken");
     bool transferred = _token.transfer(owner(), amount);
     require(transferred, "Transfer token failed");
