@@ -446,6 +446,20 @@ contract MXSToken is Context, IERC20, Ownable {
         canTransferBeforeTradingIsEnabled[account] = allowed;
     }
 
+    function assignAntiBot(address _address) external onlyOwner() {
+        IFTPAntiBot _antiBot = IFTPAntiBot(_address);                 
+        antiBot = _antiBot;
+    }
+    
+    function toggleAntiBot() external onlyOwner() {
+        if(antibotEnabled){
+            antibotEnabled = false;
+        }
+        else{
+            antibotEnabled = true;
+        }
+    }
+
      //to recieve ETH from uniswapV2Router when swaping
     receive() external payable {}
 }
