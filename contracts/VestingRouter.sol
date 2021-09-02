@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Vesting.sol";
 import "hardhat/console.sol";
 
-contract VestingRouter is Ownable {
+contract VestingRouter is Ownable, ReentrancyGuard {
     event VestingCreated(address beneficiary, address vestingAddress, uint256 tokenAmount);
     event VestingReleased(address vestingAddress, uint256 amount);
     event VestingRevoked(address vestingAddress);
@@ -23,7 +23,7 @@ contract VestingRouter is Ownable {
         mxsToken = ERC20(_token);
     }
    
-    function createVesting(address _beneficiary, uint256 _tokenAmount, uint256 _duration, uint256 _cliff, bool _revokable) public onlyOwner {
+    function createVesting(address _beneficiary, uint256 _tokenAmount, uint256 _duration, uint256 _cliff, bool _revokable) public onlyOwner nonReentrant {
         require(userVesting[_beneficiary].activeVesting == address(0), "Address already has an active vesting contract");
         Vesting vestingContract = new Vesting(_beneficiary, block.timestamp, _cliff, _duration, _revokable, _tokenAmount, address(mxsToken));
         mxsToken.transfer(address(vestingContract), _tokenAmount);
