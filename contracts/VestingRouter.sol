@@ -15,7 +15,7 @@ contract VestingRouter is Ownable, ReentrancyGuard {
         address[] vestingHistory;
     }
    
-    IERC20 mxsToken;
+    IERC20 immutable mxsToken;
 
     mapping(address => UserInfo) userVesting;
    
