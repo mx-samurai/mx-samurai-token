@@ -62,7 +62,7 @@ contract MXSToken is Context, IERC20, Ownable {
     uint256 private tradingStartTime;
     mapping(address => bool) private canTransferBeforeTradingIsEnabled;
    
-    constructor (address uniswapRouter) public {
+    constructor (address uniswapRouter) {
         IFTPAntiBot _antiBot = IFTPAntiBot(0x590C2B20f7920A2D21eD32A21B616906b4209A43);
         antiBot = _antiBot;
 
@@ -88,70 +88,70 @@ contract MXSToken is Context, IERC20, Ownable {
         emit Transfer(address(0), _msgSender(), _tTotal);
     }
 
-    function name() public view override returns (string memory) {
+    function name() external view override returns (string memory) {
         return _name;
     }
 
-    function symbol() public view override returns (string memory) {
+    function symbol() external view override returns (string memory) {
         return _symbol;
     }
 
-    function decimals() public view override returns (uint8) {
+    function decimals() external view override returns (uint8) {
         return _decimals;
     }
 
-    function totalSupply() public view override returns (uint256) {
+    function totalSupply() external view override returns (uint256) {
         return _tTotal;
     }
 
-    function balanceOf(address account) public view override returns (uint256) {
+    function balanceOf(address account) external view override returns (uint256) {
         if (_isExcludedFromReward[account]) return _tOwned[account];
         return tokenFromReflection(_rOwned[account]);
     }
 
-    function transfer(address recipient, uint256 amount) public override returns (bool) {
+    function transfer(address recipient, uint256 amount) external override returns (bool) {
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
 
-    function allowance(address owner, address spender) public view override returns (uint256) {
+    function allowance(address owner, address spender) external view override returns (uint256) {
         return _allowances[owner][spender];
     }
 
-    function approve(address spender, uint256 amount) public override returns (bool) {
+    function approve(address spender, uint256 amount) external override returns (bool) {
         _approve(_msgSender(), spender, amount);
         return true;
     }
 
-    function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) external override returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
     }
 
-    function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
+    function increaseAllowance(address spender, uint256 addedValue) external virtual returns (bool) {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender].add(addedValue));
         return true;
     }
 
-    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
+    function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool) {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
         return true;
     }
 
-    function isExcludedFromReward(address account) public view returns (bool) {
+    function isExcludedFromReward(address account) external view returns (bool) {
         return _isExcludedFromReward[account];
     }
 
-    function totalFees() public view returns (uint256) {
+    function totalFees() external view returns (uint256) {
         return _tFeeTotal;
     }
       
-    function totalCommunityRewards() public view returns (uint256) {
+    function totalCommunityRewards() external view returns (uint256) {
         return _tCommunityTotal;
     }
 
-    function deliver(uint256 tAmount) public {
+    function deliver(uint256 tAmount) external {
         address sender = _msgSender();
         require(!_isExcludedFromReward[sender], "Excluded addresses cannot call this function");
         (uint256 rAmount,,,,,) = _getValues(tAmount);
@@ -160,7 +160,7 @@ contract MXSToken is Context, IERC20, Ownable {
         _tFeeTotal = _tFeeTotal.add(tAmount);
     }
  
-    function reflectionFromToken(uint256 tAmount, bool deductTransferFee) public view returns(uint256) {
+    function reflectionFromToken(uint256 tAmount, bool deductTransferFee) external view returns(uint256) {
         require(tAmount <= _tTotal, "Amount must be less than supply");
         if (!deductTransferFee) {
             (uint256 rAmount,,,,,) = _getValues(tAmount);
@@ -177,7 +177,7 @@ contract MXSToken is Context, IERC20, Ownable {
         return rAmount.div(currentRate);
     }
 
-    function excludeFromReward(address account) public onlyOwner() {
+    function excludeFromReward(address account) external onlyOwner() {
         require(!_isExcludedFromReward[account], "Account is already excluded");
         if(_rOwned[account] > 0) {
             _tOwned[account] = tokenFromReflection(_rOwned[account]);
@@ -392,27 +392,27 @@ contract MXSToken is Context, IERC20, Ownable {
         _communityFee = _previousCommunityFee;
     }
 
-    function isExcludedFromFee(address account) public view returns(bool) {
+    function isExcludedFromFee(address account) external view returns(bool) {
         return _isExcludedFromFee[account];
     }
    
-    function excludeFromFee(address account) public onlyOwner {
+    function excludeFromFee(address account) external onlyOwner {
         _isExcludedFromFee[account] = true;
     }
    
-    function includeInFee(address account) public onlyOwner {
+    function includeInFee(address account) external onlyOwner {
         _isExcludedFromFee[account] = false;
     }
     
-    function isExcludedFromBlockLimit(address account) public view returns(bool) {
+    function isExcludedFromBlockLimit(address account) external view returns(bool) {
         return _isExcludedFromBlockLimit[account];
     }
    
-    function excludeFromBlockLimit(address account) public onlyOwner {
+    function excludeFromBlockLimit(address account) external onlyOwner {
         _isExcludedFromBlockLimit[account] = true;
     }
    
-    function includeInBlockLimit(address account) public onlyOwner {
+    function includeInBlockLimit(address account) external onlyOwner {
         _isExcludedFromBlockLimit[account] = false;
     }
 
@@ -431,17 +431,17 @@ contract MXSToken is Context, IERC20, Ownable {
         _maxTxAmount = maxTxAmount;
     }
     
-    function setCommunityWallet(address _address) public onlyOwner {
+    function setCommunityWallet(address _address) external onlyOwner {
         communityAddress = _address;
     }
 
-    function setTradingStartTime(uint256 newStartTime) public onlyOwner {
+    function setTradingStartTime(uint256 newStartTime) external onlyOwner {
        require(tradingStartTime > block.timestamp, "Trading has already started");
        require(newStartTime > block.timestamp, "Start time must be in the future");
        tradingStartTime = newStartTime;
     }
     
-    function allowPreTrading(address account, bool allowed) public onlyOwner {
+    function allowPreTrading(address account, bool allowed) external onlyOwner {
         // used for owner and pre sale addresses
         require(canTransferBeforeTradingIsEnabled[account] != allowed, "Pre trading is already the value of 'excluded'");
         canTransferBeforeTradingIsEnabled[account] = allowed;
@@ -461,20 +461,3 @@ contract MXSToken is Context, IERC20, Ownable {
         }
     }
 }
-
-// contract Deploy {
-//     MatrixSamurai public token;
-    
-//     constructor () public {
-//         token = new MatrixSamurai();
-        
-//         token.transfer(0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2, 200000000 * 10 ** 18);
-//         token.transfer(0xCA35b7d915458EF540aDe6068dFe2F44E8fa733c, 200000000 * 10 ** 18);
-//         token.transfer(0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db, 200000000 * 10 ** 18);
-//         token.transfer(0x78731D3Ca6b7E34aC0F824c42a7cC18A495cabaB, 200000000 * 10 ** 18);
-//         token.transfer(0x617F2E2fD72FD9D5503197092aC168c91465E7f2, 200000000 * 10 ** 18);
-        
-//         token.transferOwnership(msg.sender);
-// // community 0xdD870fA1b7C4700F2BD7f44238821C26f7392148
-//     }
-// }
