@@ -63,7 +63,8 @@ contract Vesting is Ownable, ReentrancyGuard {
     initialAllocation = _initialAllocation;
     mxsToken = ERC20(_mxsToken);
 
-    mxsToken.approve( owner(), type(uint256).max);
+    bool approved = mxsToken.approve( owner(), type(uint256).max);
+    require(approved, "Transfer token failed");
   }
 
   /**
@@ -88,8 +89,10 @@ contract Vesting is Ownable, ReentrancyGuard {
   function _releaseTo(address target) internal nonReentrant returns(uint256) {
     uint256 unreleased = releasableAmount();
     released = released + unreleased;
-    mxsToken.transfer(target, unreleased);
-   
+    
+    bool transferred = mxsToken.transfer(target, unreleased);
+    require(transferred, "Transfer token failed");
+
     if (mxsToken.balanceOf(address(this)) == 0) {
         complete = true;
     }
@@ -108,7 +111,8 @@ contract Vesting is Ownable, ReentrancyGuard {
     _releaseTo(beneficiary);
 
     // Send the remainder to the owner
-    mxsToken.transfer(owner(), mxsToken.balanceOf(address(this)));
+    bool transferred = mxsToken.transfer(owner(), mxsToken.balanceOf(address(this)));
+    require(transferred, "Transfer token failed");
 
     revoked = true;
     complete = true;
@@ -158,7 +162,8 @@ contract Vesting is Ownable, ReentrancyGuard {
    */
   function releaseForeignToken(ERC20 _token, uint256 amount) public onlyOwner {
     require(_token != mxsToken);
-    _token.transfer(owner(), amount);
+    bool transferred = _token.transfer(owner(), amount);
+    require(transferred, "Transfer token failed");
   }
 }
 
