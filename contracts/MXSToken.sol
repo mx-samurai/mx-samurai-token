@@ -419,14 +419,17 @@ contract MXSToken is Context, IERC20, Ownable {
     }
 
     function setTaxFeePercent(uint256 taxFee) external onlyOwner() {
+        require(taxFee < 20, "Invalid tax fee");
         _taxFee = taxFee;
     }
       
-    function setCommunityFeePercent(uint256 CommunityFee) external onlyOwner() {
-        _communityFee = CommunityFee;
+    function setCommunityFeePercent(uint256 communityFee) external onlyOwner() {
+        require(communityFee < 20, "Invalid community fee");
+        _communityFee = communityFee;
     }
 
     function setMaxTxAmount(uint256 maxTxAmount) external onlyOwner() {
+        require(maxTxAmount > 0, "Invalid Max Transaction");
         _maxTxAmount = maxTxAmount;
     }
     
@@ -459,9 +462,6 @@ contract MXSToken is Context, IERC20, Ownable {
             antibotEnabled = true;
         }
     }
-
-     //to recieve ETH from uniswapV2Router when swaping
-    receive() external payable {}
 }
 
 // contract Deploy {
