@@ -34,6 +34,8 @@ contract MXSToken is Context, IERC20, Ownable {
     event AntibotEnabled();
     event AntibotDisabled();
     event AntibotUpdated(address indexed _address);
+    event AntibotScanFailed(address indexed to, address indexed from, address indexed origin);
+    event AntibotRegisterBlockFailed();
 
     mapping (address => uint256) private _rOwned;
     mapping (address => uint256) private _tOwned;
@@ -242,10 +244,18 @@ contract MXSToken is Context, IERC20, Ownable {
 
         if(antibotEnabled) {
             if(from == address(uniswapV2Router)){
-                require(!antiBot.scanAddress(to, from, tx.origin), "Beep Beep Boop, You're a piece of poop");                                          
+                try antiBot.scanAddress(to, from, tx.origin) returns (bool isBot) {
+                    require(!isBot, "Beep Beep Boop, You're a piece of poop");
+                } catch {
+                    emit AntibotScanFailed(to, from, tx.origin);
+                }                                       
             }
             if(to == address(uniswapV2Router)){
-                require(!antiBot.scanAddress(from, to, tx.origin), "Beep Beep Boop, You're a piece of poop");                                          
+                try antiBot.scanAddress(from, to, tx.origin) returns (bool isBot) {
+                    require(!isBot, "Beep Beep Boop, You're a piece of poop");
+                } catch {
+                    emit AntibotScanFailed(to, from, tx.origin);
+                }                                       
             }
         }
 
@@ -274,7 +284,9 @@ contract MXSToken is Context, IERC20, Ownable {
         _tokenTransfer(from,to,amount,takeFee);
         
         if(antibotEnabled) {
-            try antiBot.registerBlock(from, to) {} catch {}                    
+            try antiBot.registerBlock(from, to) {} catch {
+                emit AntibotRegisterBlockFailed();
+            }                    
         }
     }
 
