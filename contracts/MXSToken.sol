@@ -263,16 +263,6 @@ contract MXSToken is Context, IERC20, Ownable {
             require(amount <= _maxTxAmount, "Transfer amount exceeds the maxTxAmount.");
         }
         
-        // if (!_isExcludedFromBlockLimit[to]) {
-        //     require(block.number > lastBlockTransfer[to], "One transfer per block");
-        //     lastBlockTransfer[to] = block.number;
-        // }
-        
-        // if (!_isExcludedFromBlockLimit[from]) {
-        //     require(block.number > lastBlockTransfer[from], "One transfer per block");
-        //     lastBlockTransfer[from] = block.number;
-        // }
-        
         bool takeFee = true;
         
         // if any account belongs to _isExcludedFromFee account then remove the fee
