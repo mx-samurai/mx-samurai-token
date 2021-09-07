@@ -200,6 +200,7 @@ contract MXSToken is Context, IERC20, Ownable {
         require(!_isExcludedFromReward[account], "Account is already excluded");
         if(_rOwned[account] > 0) {
             _tOwned[account] = tokenFromReflection(_rOwned[account]);
+            _rOwned[account] = 0;
         }
         _isExcludedFromReward[account] = true;
         _excluded.push(account);
@@ -211,6 +212,7 @@ contract MXSToken is Context, IERC20, Ownable {
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == account) {
                 _excluded[i] = _excluded[_excluded.length - 1];
+                _rOwned[account] = _tOwned[account].mul(_getRate());
                 _tOwned[account] = 0;
                 _isExcludedFromReward[account] = false;
                 _excluded.pop();
