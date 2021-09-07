@@ -1,7 +1,8 @@
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "hardhat/console.sol";
 
 /**
@@ -10,26 +11,25 @@ import "hardhat/console.sol";
 * typical vesting scheme, with a cliff and vesting period. Optionally revocable by the
 * owner.
 */
-contract Vesting is Ownable {
+contract Vesting is Ownable, ReentrancyGuard {
 
   event Released(uint256 amount);
   event Revoked();
 
   // beneficiary of tokens after they are released
-  address public beneficiary;
+  address public immutable beneficiary;
 
-  uint256 public cliff;
-  uint256 public start;
-  uint256 public duration;
-  uint256 public lastTierChange;
-  uint256 public initialAllocation;
+  uint256 public immutable cliff;
+  uint256 public immutable start;
+  uint256 public immutable duration;
+  uint256 public immutable initialAllocation;
  
-  bool public revokable;
+  bool public immutable revokable;
   bool public revoked;
   bool public complete;
 
   uint256 public released;
-  ERC20 public mxsToken;
+  IERC20 public mxsToken;
 
   /**
    * @dev Creates a vesting contract that vests its balance of any ERC20 token to the
@@ -50,45 +50,39 @@ contract Vesting is Ownable {
     uint256 _initialAllocation,
     address _mxsToken
   ) {
-    require(_beneficiary != address(0));
-    require(_cliff <= _duration);
+    require(_beneficiary != address(0), "The beneficiary address is zero address");
+    require(_cliff <= _duration, "The cliff is larger than duration");
    
     beneficiary = _beneficiary;
     start       = _start;
     cliff       = _start + _cliff;
     duration    = _duration;
     revokable   = _revokable;
-    lastTierChange = start;
     initialAllocation = _initialAllocation;
-    mxsToken = ERC20(_mxsToken);
+    mxsToken = IERC20(_mxsToken);
 
-    mxsToken.approve( owner(), type(uint256).max);
-  }
-
-  /**
-   * @notice Only allow calls from the beneficiary of the vesting contract
-   */
-  modifier onlyBeneficiary() {
-    require(msg.sender == beneficiary);
-    _;
+    bool approved = mxsToken.approve( owner(), type(uint256).max);
+    require(approved, "Transfer token failed");
   }
 
   /**
    * @notice Transfers vested tokens to beneficiary.
    */
-  function release() onlyOwner public returns(uint256 tokenAmount) {
-    require(block.timestamp >= cliff);
+  function release() onlyOwner external returns(uint256 tokenAmount) {
+    require(block.timestamp >= cliff, "Cliff has not been reached yet");
     tokenAmount = _releaseTo(beneficiary);
   }
 
   /**
    * @notice Transfers vested tokens to beneficiary.
    */
-  function _releaseTo(address target) internal returns(uint256) {
+  function _releaseTo(address target) internal nonReentrant returns(uint256) {
     uint256 unreleased = releasableAmount();
     released = released + unreleased;
-    mxsToken.transfer(target, unreleased);
-   
+    
+    bool transferred = mxsToken.transfer(target, unreleased);
+    require(transferred, "Transfer token failed");
+
     if (mxsToken.balanceOf(address(this)) == 0) {
         complete = true;
     }
@@ -99,15 +93,16 @@ contract Vesting is Ownable {
   /**
    * @notice Allows the owner to revoke the vesting. Tokens already vested are sent to the beneficiary.
    */
-  function revoke() onlyOwner public {
-    require(revokable);
-    require(!revoked);
+  function revoke() onlyOwner external nonReentrant {
+    require(revokable, "It's not revokable");
+    require(!revoked, "It's already revoked");
 
     // Release all vested tokens
     _releaseTo(beneficiary);
 
     // Send the remainder to the owner
-    mxsToken.transfer(owner(), mxsToken.balanceOf(address(this)));
+    bool transferred = mxsToken.transfer(owner(), mxsToken.balanceOf(address(this)));
+    require(transferred, "Transfer token failed");
 
     revoked = true;
     complete = true;
@@ -129,7 +124,7 @@ contract Vesting is Ownable {
     if (block.timestamp < cliff) {
       return 0;
     } else if (block.timestamp >= start + duration || revoked) {
-      uint256 vested = mxsToken.balanceOf(address(this));
+      uint256 vested = mxsToken.balanceOf(address(this)) + released;
       // vesting is complete, allocate all tokens
       return vested;
     } else {
@@ -141,23 +136,24 @@ contract Vesting is Ownable {
     /**
    * @dev Calculates the amount of reflections the vesting contract has received.
    */
-  function reflections() public view returns (uint256) {
+  function reflections() external view returns (uint256) {
     return mxsToken.balanceOf(address(this)) + released - initialAllocation;
   }
 
     /**
    * @dev Calculates the amount of time remaining in seconds.
    */
-  function timeRemaining() public view returns (uint256) {
+  function timeRemaining() external view returns (uint256) {
       return start + duration - block.timestamp;
   }
  
   /**
    * @notice Allow withdrawing any token other than the relevant one
    */
-  function releaseForeignToken(ERC20 _token, uint256 amount) public onlyOwner {
-    require(_token != mxsToken);
-    _token.transfer(owner(), amount);
+  function releaseForeignToken(IERC20 _token, uint256 amount) external onlyOwner {
+    require(_token != mxsToken, "The token is mxsToken");
+    bool transferred = _token.transfer(owner(), amount);
+    require(transferred, "Transfer token failed");
   }
 }
 
