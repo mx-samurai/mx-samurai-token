@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Vesting.sol";
-import "hardhat/console.sol";
 
 contract VestingRouter is Ownable, ReentrancyGuard {
     event VestingCreated(address indexed beneficiary, address indexed vestingAddress, uint256 tokenAmount);
