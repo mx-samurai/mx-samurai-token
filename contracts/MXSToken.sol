@@ -196,30 +196,13 @@ contract MXSToken is Context, IERC20, Ownable {
         return rAmount.div(currentRate);
     }
 
-    function excludeFromReward(address account) external onlyOwner() {
+    function excludeFromReward(address account) public onlyOwner() {
         require(!_isExcludedFromReward[account], "Account is already excluded");
         if(_rOwned[account] > 0) {
             _tOwned[account] = tokenFromReflection(_rOwned[account]);
-            _rOwned[account] = 0;
         }
         _isExcludedFromReward[account] = true;
         _excluded.push(account);
-        emit ExcludeFromRewards(account);
-    }
-
-    function includeInReward(address account) external onlyOwner() {
-        require(_isExcludedFromReward[account], "Account is not excluded");
-        for (uint256 i = 0; i < _excluded.length; i++) {
-            if (_excluded[i] == account) {
-                _excluded[i] = _excluded[_excluded.length - 1];
-                _rOwned[account] = _tOwned[account].mul(_getRate());
-                _tOwned[account] = 0;
-                _isExcludedFromReward[account] = false;
-                _excluded.pop();
-                break;
-            }
-        }
-        emit IncludeInRewards(account);
     }
 
     function _approve(address owner, address spender, uint256 amount) private {
