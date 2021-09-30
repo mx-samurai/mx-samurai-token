@@ -50,7 +50,7 @@ contract MXSToken is Context, IERC20, Ownable {
     address[] private _excluded;
   
     uint256 private constant MAX = ~uint256(0);
-    uint256 private constant _tTotal = 1000000000 * 10 ** 18;
+    uint256 private constant _tTotal = 100000000000 * 10 ** 18;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
     uint256 private _tCommunityTotal;
