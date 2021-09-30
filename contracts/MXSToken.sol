@@ -9,11 +9,6 @@ import '@uniswap/v2-core/contracts/interfaces/IERC20.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol';
 import '@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol';
 
-interface IFTPAntiBot {
-    function scanAddress(address _address, address _safeAddress, address _origin) external returns (bool);
-    function registerBlock(address _recipient, address _sender) external;
-}
-
 contract MXSToken is Context, IERC20, Ownable {
     using SafeMath for uint256;
     using Address for address;
@@ -31,12 +26,6 @@ contract MXSToken is Context, IERC20, Ownable {
 
     event CommunityWalletUpdated(address indexed _address);
 
-    event AntibotEnabled();
-    event AntibotDisabled();
-    event AntibotUpdated(address indexed _address);
-    event AntibotScanFailed(address indexed to, address indexed from, address indexed origin);
-    event AntibotRegisterBlockFailed();
-
     mapping (address => uint256) private _rOwned;
     mapping (address => uint256) private _tOwned;
     mapping (address => mapping (address => uint256)) private _allowances;
@@ -50,7 +39,7 @@ contract MXSToken is Context, IERC20, Ownable {
     address[] private _excluded;
   
     uint256 private constant MAX = ~uint256(0);
-    uint256 private constant _tTotal = 1000000000 * 10 ** 18;
+    uint256 private constant _tTotal = 100000000000 * 10 ** 18;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
     uint256 private _tCommunityTotal;
@@ -75,16 +64,10 @@ contract MXSToken is Context, IERC20, Ownable {
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapV2Pair;
 
-    IFTPAntiBot private antiBot;
-    bool public antibotEnabled = false;
-
     uint256 private tradingStartTime;
     mapping(address => bool) private canTransferBeforeTradingIsEnabled;
    
     constructor (address uniswapRouter) {
-        IFTPAntiBot _antiBot = IFTPAntiBot(0x590C2B20f7920A2D21eD32A21B616906b4209A43);
-        antiBot = _antiBot;
-
         _rOwned[_msgSender()] = _rTotal;
        
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(uniswapRouter);
@@ -227,23 +210,6 @@ contract MXSToken is Context, IERC20, Ownable {
             require(canTransferBeforeTradingIsEnabled[from], "This account cannot send tokens until trading is enabled");
         }
 
-        if(antibotEnabled) {
-            if(from == address(uniswapV2Router)){
-                try antiBot.scanAddress(to, from, tx.origin) returns (bool isBot) {
-                    require(!isBot, "Beep Beep Boop, You're a piece of poop");
-                } catch {
-                    emit AntibotScanFailed(to, from, tx.origin);
-                }                                       
-            }
-            if(to == address(uniswapV2Router)){
-                try antiBot.scanAddress(from, to, tx.origin) returns (bool isBot) {
-                    require(!isBot, "Beep Beep Boop, You're a piece of poop");
-                } catch {
-                    emit AntibotScanFailed(to, from, tx.origin);
-                }                                       
-            }
-        }
-
         if (from != owner() && to != owner()) {
             require(amount <= _maxTxAmount, "Transfer amount exceeds the maxTxAmount.");
         }
@@ -257,12 +223,6 @@ contract MXSToken is Context, IERC20, Ownable {
         }
        
         _tokenTransfer(from,to,amount,takeFee);
-        
-        if(antibotEnabled) {
-            try antiBot.registerBlock(from, to) {} catch {
-                emit AntibotRegisterBlockFailed();
-            }                    
-        }
     }
 
     function _tokenTransfer(address sender, address recipient, uint256 amount,bool takeFee) private {
@@ -461,23 +421,6 @@ contract MXSToken is Context, IERC20, Ownable {
             emit ExcludeFromPreTrading(account);
         } else {
             emit IncludeInPreTrading(account);
-        }
-    }
-
-    function assignAntiBot(address _address) external onlyOwner() {
-        IFTPAntiBot _antiBot = IFTPAntiBot(_address);                 
-        antiBot = _antiBot;
-        emit AntibotUpdated(_address);
-    }
-    
-    function toggleAntiBot() external onlyOwner() {
-        if(antibotEnabled){
-            antibotEnabled = false;
-            emit AntibotDisabled();
-        }
-        else{
-            antibotEnabled = true;
-            emit AntibotEnabled();
         }
     }
 }

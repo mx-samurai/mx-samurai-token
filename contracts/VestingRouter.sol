@@ -45,6 +45,7 @@ contract VestingRouter is Ownable, ReentrancyGuard {
         uint256 vestedAmount,
         uint256 allocation,
         uint256 reflectionsReceived,
+        uint256 timeRemaining,
         bool complete
     ) {
         return vestingInfo(userVesting[_account].activeVesting);
@@ -57,6 +58,7 @@ contract VestingRouter is Ownable, ReentrancyGuard {
         uint256 vestedAmount,
         uint256 allocation,
         uint256 reflectionsReceived,
+        uint256 timeRemaining,
         bool complete
     ) {
         Vesting vestingContract = Vesting(_vestingAddress);
@@ -66,6 +68,7 @@ contract VestingRouter is Ownable, ReentrancyGuard {
         vestedAmount = vestingContract.vestedAmount();
         allocation = vestingContract.initialAllocation();
         reflectionsReceived = vestingContract.reflections();
+        timeRemaining = vestingContract.timeRemaining();
         complete = vestingContract.complete();
     }
    
