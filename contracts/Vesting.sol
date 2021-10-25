@@ -92,7 +92,7 @@ contract Vesting is Ownable, ReentrancyGuard {
   /**
    * @notice Allows the owner to revoke the vesting. Tokens already vested are sent to the beneficiary.
    */
-  function revoke() onlyOwner external nonReentrant {
+  function revoke() onlyOwner external {
     require(revokable, "It's not revokable");
     require(!revoked, "It's already revoked");
 
