@@ -40,6 +40,8 @@ describe("Vesting Router", function () {
     
     before(async function() {
         [mxsOwner, vestingOwner, beneficiary1, beneficiary2, pretender, tokenBuyer, lastAddr] = await ethers.getSigners();
+        console.log("vesting owner == ", vestingOwner);
+
         const UniswapV2Library = await ethers.getContractFactory(UniswapV2FactoryAbi, UniswapV2FactoryBytecode);
         const uniswapV2Library = await UniswapV2Library.deploy(vestingOwner.address);
 
@@ -142,7 +144,9 @@ describe("Vesting Router", function () {
 
         await ethers.provider.send("evm_setNextBlockTimestamp", [vestingTimestamp1 + duration / 2]);
 
+        console.log("Revoking")
         await routerAsOwner.revoke(userVestingInfo1.vestingAddress);
+        console.log("done Revoking")
 
         const vestingBalance = await mxsToken.balanceOf(vestingContract1.address);
         expect(vestingBalance).to.equal(parseEther("0"));

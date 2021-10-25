@@ -34,8 +34,6 @@ contract MXSToken is Context, IERC20, Ownable {
 
     mapping (address => bool) private _isExcludedFromReward;
     
-    mapping (address => bool) private _isExcludedFromBlockLimit;
-
     address[] private _excluded;
   
     uint256 private constant MAX = ~uint256(0);
@@ -58,9 +56,7 @@ contract MXSToken is Context, IERC20, Ownable {
     uint256 public _maxTxAmount = 1000000 * 10 ** 18;
 
     address public communityAddress = 0xdD870fA1b7C4700F2BD7f44238821C26f7392148;
-    
-    mapping(address => uint256) lastBlockTransfer;
-    
+        
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapV2Pair;
 
@@ -80,11 +76,6 @@ contract MXSToken is Context, IERC20, Ownable {
         
         _isExcludedFromReward[uniswapV2Pair] = true;
         
-        _isExcludedFromBlockLimit[owner()] = true;
-        _isExcludedFromBlockLimit[uniswapV2Pair] = true;
-        _isExcludedFromBlockLimit[address(uniswapV2Router)] = true;
-        _isExcludedFromBlockLimit[communityAddress] = true;
-
         canTransferBeforeTradingIsEnabled[owner()] = true;
         
         emit Transfer(address(0), _msgSender(), _tTotal);
@@ -372,18 +363,6 @@ contract MXSToken is Context, IERC20, Ownable {
         emit IncludeInFee(account);
     }
     
-    function isExcludedFromBlockLimit(address account) external view returns(bool) {
-        return _isExcludedFromBlockLimit[account];
-    }
-   
-    function excludeFromBlockLimit(address account) external onlyOwner {
-        _isExcludedFromBlockLimit[account] = true;
-    }
-   
-    function includeInBlockLimit(address account) external onlyOwner {
-        _isExcludedFromBlockLimit[account] = false;
-    }
-
     function setTaxFeePercent(uint256 taxFee) external onlyOwner() {
         require(taxFee < 20, "Invalid tax fee");
         _taxFee = taxFee;
