@@ -20,7 +20,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
  */
 
 module.exports = {
-  // defaultNetwork: "rinkeby",
+  defaultNetwork: "rinkeby",
   networks: {
     hardhat: {
     },
