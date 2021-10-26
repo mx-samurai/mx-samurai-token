@@ -2,6 +2,9 @@ const { parseEther } = require("@ethersproject/units");
 const hre = require("hardhat");
 const UNISWAP_ROUTER = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
 
+const MXS_ADDRESS = "0xad77785D59277c177aC21EE4ec40Bff76a832077";
+const VESTING_ROUTER_ADDRESS = "0x84Ab56f0b32Ff4A07d07829b66beC7C519ec10d0";
+
 async function main() {
   const arr1 = [
     "0x16E7451D072eA28f2952eefCd7cC4A30B1F6A557",
@@ -41,10 +44,17 @@ async function main() {
     "0xD655AE59d925807553E690605D21D0af494BF066"
   ];
 	console.log("Running");
+
+  // Use this for contracts already deployed
+  
+  // const mxsToken = await ethers.getContractAt("MXSToken", MXS_ADDRESS);
+  // const vestingRouter = await ethers.getContractAt("VestingRouter", VESTING_ROUTER_ADDRESS);
+
   const MXSToken = await hre.ethers.getContractFactory("MXSToken");
   const mxsToken = await MXSToken.deploy(UNISWAP_ROUTER);
-
   await mxsToken.deployed();
+
+
   console.log("Token deployed to", mxsToken.address);
 
   const VestingRouter = await ethers.getContractFactory("VestingRouter");
@@ -53,7 +63,6 @@ async function main() {
   await vestingRouter.deployed();
 
   console.log("Vesting Router deployed to", vestingRouter.address);
-
 
   await mxsToken.excludeFromReward("0xEB1B1fB761A336DF83283333280Ab39F4289aDD5");
   await mxsToken.excludeFromReward("0xD5f5E93594A90F603D2FE8f6BABdC8F8DF590dcF");
@@ -69,6 +78,8 @@ async function main() {
 
   await mxsToken.allowPreTrading("0xEB1B1fB761A336DF83283333280Ab39F4289aDD5", true);
   await mxsToken.allowPreTrading("0xD5f5E93594A90F603D2FE8f6BABdC8F8DF590dcF", true);
+  await mxsToken.allowPreTrading(vestingRouter.address, true);
+
   console.log("Token configured: Pretrade whitelist list set.");
 
     // await mxsToken.setTradingStartTime("1635621804");
@@ -83,19 +94,27 @@ async function main() {
   console.log("Transferred 12500000000 tokens to the Vesting Router.");
 
   for (var i = 0; i < arr1.length; i++) {
-    await vestingRouter.createVesting(arr1[i], parseEther("1000000000"), "10368000", "0", false, { gasLimit: 2000000, gasPrice: 1 });
+    const tx = await vestingRouter.createVesting(arr1[i], parseEther("1000000000"), "10368000", "0", false, { gasLimit: 5000000 });
+    console.log("tx submitted");
+    await tx.wait();
     console.log("Vesting configured for King wallet: " + arr1[i]);
   }
   for (var j = 0; j < arr2.length; j++) {
-    await vestingRouter.createVesting(arr2[j], parseEther("500000000"), "5184000", "0", false, { gasLimit: 2000000, gasPrice: 1 });
+    const tx = await vestingRouter.createVesting(arr2[j], parseEther("500000000"), "5184000", "0", false, { gasLimit: 5000000 });
+    console.log("tx submitted");
+    await tx.wait();
     console.log("Vesting configured for Shogun wallet: " + arr2[j]);
   }
   for (var k = 0; k < arr3.length; k++) {
-    await vestingRouter.createVesting(arr3[k], parseEther("250000000"), "2592000", "0", false, { gasLimit: 2000000, gasPrice: 1 });
+    const tx = await vestingRouter.createVesting(arr3[k], parseEther("250000000"), "2592000", "0", false, { gasLimit: 5000000 });
+    console.log("tx submitted");
+    await tx.wait();
     console.log("Vesting configured for Daimyo wallet: " + arr3[k]);
   }
   for (var l = 0; l < arr4.length; l++) {
-    await vestingRouter.createVesting(arr4[l], parseEther("250000000"), "2592000", "0", true, { gasLimit: 2000000, gasPrice: 1 });
+    const tx = await vestingRouter.createVesting(arr4[l], parseEther("250000000"), "2592000", "0", true, { gasLimit: 5000000 });
+    console.log("tx submitted");
+    await tx.wait();
     console.log("Vesting configured for Daimyo wallet: " + arr4[l]);
   }
 
@@ -107,3 +126,6 @@ main()
     console.error(error);
     process.exit(1);
   });
+
+  //npx hardhat verify --network rinkeby 0xad77785D59277c177aC21EE4ec40Bff76a832077 "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+  //npx hardhat verify --network rinkeby 0x84Ab56f0b32Ff4A07d07829b66beC7C519ec10d0 "0xad77785D59277c177aC21EE4ec40Bff76a832077"
