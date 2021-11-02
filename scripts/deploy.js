@@ -62,14 +62,17 @@ async function main() {
 
   await vestingRouter.deployed();
 
+
   console.log("Vesting Router deployed to", vestingRouter.address);
 
   await mxsToken.excludeFromReward("0xEB1B1fB761A336DF83283333280Ab39F4289aDD5");
   await mxsToken.excludeFromReward("0xD5f5E93594A90F603D2FE8f6BABdC8F8DF590dcF");
+  await mxsToken.excludeFromReward("0x818215Af658c8b80bFf4BfDa9F7E0bED7754a8e3"); // TODO: Community Wallet
   console.log("Token configured: Exclusions from Rewards set.");
 
   await mxsToken.excludeFromFee("0xEB1B1fB761A336DF83283333280Ab39F4289aDD5");
   await mxsToken.excludeFromFee("0xD5f5E93594A90F603D2FE8f6BABdC8F8DF590dcF");
+  await mxsToken.excludeFromFee("0x818215Af658c8b80bFf4BfDa9F7E0bED7754a8e3"); // TODO: Community Wallet
   console.log("Token configured: Exclusions from Fees set.");
 
   // await mxsToken.excludeFromBlockLimit("0xEB1B1fB761A336DF83283333280Ab39F4289aDD5");
@@ -88,9 +91,17 @@ async function main() {
   await mxsToken.setMaxTxAmount(parseEther("100000000000"));
   console.log("Token configured: Max transaction amount set.");
 
+  // Transfer funds to Community Wallet.
+  await mxsToken.transfer("0x818215Af658c8b80bFf4BfDa9F7E0bED7754a8e3", parseEther("10059615639"));
+  console.log("Transferred 10059615639 tokens to the Vesting Router.");
+
+  // Transfer funds to Deployer Multisig.
+  await mxsToken.transfer("0xAF248bB81f01A9F732fFD3eaad237389CE279c69", parseEther("62066999688"));
+  console.log("Transferred 62066999688 tokens to the Vesting Router.");
+
+  // Transfer funds to Vesting Router
   await mxsToken.transfer(vestingRouter.address, parseEther("12500000000"));
   // await tokenTransfer.wait();
-
   console.log("Transferred 12500000000 tokens to the Vesting Router.");
 
   for (var i = 0; i < arr1.length; i++) {
@@ -99,18 +110,21 @@ async function main() {
     await tx.wait();
     console.log("Vesting configured for King wallet: " + arr1[i]);
   }
+
   for (var j = 0; j < arr2.length; j++) {
     const tx = await vestingRouter.createVesting(arr2[j], parseEther("500000000"), "5184000", "0", false, { gasLimit: 5000000 });
     console.log("tx submitted");
     await tx.wait();
     console.log("Vesting configured for Shogun wallet: " + arr2[j]);
   }
+
   for (var k = 0; k < arr3.length; k++) {
     const tx = await vestingRouter.createVesting(arr3[k], parseEther("250000000"), "2592000", "0", false, { gasLimit: 5000000 });
     console.log("tx submitted");
     await tx.wait();
     console.log("Vesting configured for Daimyo wallet: " + arr3[k]);
   }
+
   for (var l = 0; l < arr4.length; l++) {
     const tx = await vestingRouter.createVesting(arr4[l], parseEther("250000000"), "2592000", "0", true, { gasLimit: 5000000 });
     console.log("tx submitted");
@@ -127,5 +141,5 @@ main()
     process.exit(1);
   });
 
-  //npx hardhat verify --network rinkeby 0xad77785D59277c177aC21EE4ec40Bff76a832077 "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
-  //npx hardhat verify --network rinkeby 0x84Ab56f0b32Ff4A07d07829b66beC7C519ec10d0 "0xad77785D59277c177aC21EE4ec40Bff76a832077"
+  //npx hardhat verify --network rinkeby 0x2Fe95AeA15D9EebD614f566BbA8720a3047Cf29F "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+  //npx hardhat verify --network rinkeby 0xD91Bb0D965a05badd05b08a69418a42044724Ab9 "0x2Fe95AeA15D9EebD614f566BbA8720a3047Cf29F"
