@@ -42,7 +42,7 @@ contract MXSToken is Context, IERC20, Ownable {
     uint256 private _tFeeTotal;
     uint256 private _tCommunityTotal;
 
-    string private constant _name = "Matrix Samurai";
+    string private constant _name = "Marketing Samurai";
     string private constant _symbol = "MXS";
     uint8 private constant _decimals = 18;
 
@@ -55,12 +55,12 @@ contract MXSToken is Context, IERC20, Ownable {
 
     uint256 public _maxTxAmount = 1000000 * 10 ** 18;
 
-    address public communityAddress = 0xdD870fA1b7C4700F2BD7f44238821C26f7392148;
+    address public communityAddress = 0x94f6153EbfEB633E9321f9F31Ed19E649239d7DF;
         
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapV2Pair;
 
-    uint256 private tradingStartTime;
+    uint256 private tradingStartTime = 1640966414;
     mapping(address => bool) private canTransferBeforeTradingIsEnabled;
    
     constructor (address uniswapRouter) {
