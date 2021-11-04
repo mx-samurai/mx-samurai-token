@@ -1,5 +1,6 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-etherscan");
+require("hardhat-gas-reporter");
 const { ALCEMIST_RINKEBY_URL, ETHERSCAN_API_KEY, PRIVATE_KEY_1 } = require("./config");
 
 // This is a sample Hardhat task. To learn how to create your own go to
@@ -32,5 +33,8 @@ module.exports = {
   solidity: "0.8.4",
   etherscan: {
     apiKey: ETHERSCAN_API_KEY
+  },
+  gasReporter: {
+    enabled: true
   }
 };
