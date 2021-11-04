@@ -20,6 +20,11 @@ contract TokenDispense is Ownable {
         mxsToken = IERC20(mxsTokenAddress);
     }
 
+    function retrieveTokens() external onlyOwner {
+        uint256 tokenBalance = mxsToken.balanceOf(address(this));
+        mxsToken.transfer(owner(), tokenBalance);
+    }
+
     function claimTokens(bytes memory signature, uint256 tokenAmount) public {
         require(!claimedAddresses[msg.sender], "TokenDispense: Address has already claimed");
 
